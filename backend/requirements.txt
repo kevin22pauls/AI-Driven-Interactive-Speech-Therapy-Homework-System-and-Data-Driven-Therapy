@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+pydantic
+faster-whisper
+torch
+numpy
+scipy
+noisereduce
+silero-vad
+jiwer
+sentence-transformers
+soundfile

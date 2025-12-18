@@ -1,0 +1,183 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Speech Homework Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width:700px; }
+    h2 { margin-bottom: 6px; }
+    #prompt { font-size: 18px; margin: 10px 0; white-space: pre-wrap; }
+    button { padding: 8px 12px; margin-right: 8px; }
+    #status { margin-top: 10px; color: #333; }
+    pre { background:#f3f3f3; padding:10px; border-radius:6px; max-height:300px; overflow:auto; }
+    .warn { color: darkred; }
+  </style>
+</head>
+<body>
+  <h2>Speech Homework Demo</h2>
+  <div id="prompt">Click "Get Prompt" to start</div>
+  <button id="getPrompt">Get Prompt</button>
+  <button id="startRec" disabled>Start Recording</button>
+  <button id="stopRec" disabled>Stop</button>
+  <div id="status"></div>
+  <pre id="result"></pre>
+
+<script>
+/* ======== CONFIG ======== */
+const BACKEND = "http://127.0.0.1:8000"; // <-- make sure this matches your backend
+/* ======================== */
+
+const promptEl = document.getElementById("prompt");
+const getBtn = document.getElementById("getPrompt");
+const startBtn = document.getElementById("startRec");
+const stopBtn = document.getElementById("stopRec");
+const statusEl = document.getElementById("status");
+const resultEl = document.getElementById("result");
+
+let session = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let silenceTimeout = null;
+let audioContext, analyser, sourceNode;
+
+async function getPrompt() {
+  statusEl.innerText = "Requesting prompt...";
+  try {
+    // Use session/start to get a session id + single prompt
+    const sres = await fetch(`${BACKEND}/session/start`, { method: "POST" });
+    if (!sres.ok) throw new Error("Failed to get session");
+    const sjson = await sres.json();
+    session = { session_id: sjson.session_id, prompt_text: sjson.prompt_text, object: sjson.object };
+    promptEl.innerText = `Object: ${session.object}\nPrompt: ${session.prompt_text}`;
+    startBtn.disabled = false;
+    statusEl.innerText = "Prompt ready. Click 'Start Recording' to answer.";
+  } catch (e) {
+    console.error(e);
+    statusEl.innerText = "Could not fetch prompt. Is backend running? " + e.message;
+    startBtn.disabled = true;
+  }
+}
+
+getBtn.addEventListener("click", getPrompt);
+
+startBtn.addEventListener("click", async () => {
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  statusEl.innerText = "Requesting microphone permission...";
+  audioChunks = [];
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => {
+      if (e.data && e.data.size > 0) audioChunks.push(e.data);
+    };
+    mediaRecorder.onstop = async () => {
+      statusEl.innerText = "Recording stopped. Uploading...";
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      await uploadRecording(blob);
+    };
+
+    // Setup simple client-side VAD (energy-based)
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      sourceNode = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      sourceNode.connect(analyser);
+      monitorSilence(); // start monitoring
+    } catch (e) {
+      console.warn("AudioContext VAD not available", e);
+    }
+
+    mediaRecorder.start();
+    statusEl.innerText = "Recording... Speak now.";
+    // fallback auto-stop after 8 seconds
+    setTimeout(() => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        stopRecording();
+      }
+    }, 8000);
+
+  } catch (err) {
+    console.error("microphone error", err);
+    statusEl.innerText = "Microphone error: " + err.message;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+  }
+});
+
+stopBtn.addEventListener("click", stopRecording);
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+  }
+  stopBtn.disabled = true;
+  startBtn.disabled = false;
+  if (audioContext) {
+    try { audioContext.close(); } catch(e){}
+    audioContext = null;
+    analyser = null;
+  }
+}
+
+function monitorSilence() {
+  const bufferLength = analyser.fftSize;
+  const data = new Uint8Array(bufferLength);
+  const check = () => {
+    if (!analyser) return;
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      const val = (data[i] - 128) / 128;
+      sum += val * val;
+    }
+    const rms = Math.sqrt(sum / bufferLength);
+    // threshold tuned for quiet rooms; raise if your environment is noisy
+    if (rms > 0.02) {
+      if (silenceTimeout) {
+        clearTimeout(silenceTimeout);
+        silenceTimeout = null;
+      }
+      silenceTimeout = setTimeout(() => {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          stopRecording();
+        }
+      }, 900); // stop after 900ms of silence
+    }
+    requestAnimationFrame(check);
+  };
+  check();
+}
+
+async function uploadRecording(blob) {
+  if (!session) {
+    statusEl.innerText = "No session info found. Click Get Prompt first.";
+    return;
+  }
+
+  const form = new FormData();
+  form.append("session_id", session.session_id);
+  form.append("expected_text", session.prompt_text || "");
+  // name the file .webm — backend will accept common formats if ffmpeg in PATH
+  form.append("audio", blob, "recording.webm");
+
+  try {
+    const res = await fetch(`${BACKEND}/record`, { method: "POST", body: form });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Server returned ${res.status}: ${txt}`);
+    }
+    const json = await res.json();
+    resultEl.innerText = JSON.stringify(json, null, 2);
+    statusEl.innerText = "Analysis complete";
+  } catch (e) {
+    statusEl.innerText = "Upload failed: " + e.message;
+    resultEl.innerText = "";
+    console.error("upload error", e);
+  }
+}
+</script>
+</body>
+</html>
