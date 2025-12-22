@@ -17,6 +17,7 @@
   <h2>Speech Homework Demo</h2>
   <div id="prompt">Click "Get Prompt" to start</div>
   <button id="getPrompt">Get Prompt</button>
+  <button id="newObject" style="display: none;">New Object</button>
   <button id="startRec" disabled>Start Recording</button>
   <button id="stopRec" disabled>Stop</button>
   <div id="status"></div>
@@ -29,6 +30,7 @@ const BACKEND = "http://127.0.0.1:8000"; // <-- make sure this matches your back
 
 const promptEl = document.getElementById("prompt");
 const getBtn = document.getElementById("getPrompt");
+const newObjBtn = document.getElementById("newObject");
 const startBtn = document.getElementById("startRec");
 const stopBtn = document.getElementById("stopRec");
 const statusEl = document.getElementById("status");
@@ -43,11 +45,37 @@ let audioContext, analyser, sourceNode;
 async function getPrompt() {
   statusEl.innerText = "Requesting prompt...";
   try {
-    // Use session/start to get a session id + single prompt
-    const sres = await fetch(`${BACKEND}/session/start`, { method: "POST" });
-    if (!sres.ok) throw new Error("Failed to get session");
-    const sjson = await sres.json();
-    session = { session_id: sjson.session_id, prompt_text: sjson.prompt_text, object: sjson.object };
+    let response, json;
+
+    if (!session || !session.session_id) {
+      // First time - start a new session
+      response = await fetch(`${BACKEND}/session/start`, { method: "POST" });
+      if (!response.ok) throw new Error("Failed to start session");
+      json = await response.json();
+
+      // Show the "New Object" button after first session starts
+      newObjBtn.style.display = "inline-block";
+    } else {
+      // Already have a session - get next prompt for same object
+      const formData = new FormData();
+      formData.append("session_id", session.session_id);
+
+      response = await fetch(`${BACKEND}/session/next-prompt`, {
+        method: "POST",
+        body: formData
+      });
+      if (!response.ok) throw new Error("Failed to get next prompt");
+      json = await response.json();
+    }
+
+    // Update session data
+    session = {
+      session_id: json.session_id,
+      prompt_text: json.prompt_text,
+      object: json.object,
+      expected_answer: json.expected_answer
+    };
+
     promptEl.innerText = `Object: ${session.object}\nPrompt: ${session.prompt_text}`;
     startBtn.disabled = false;
     statusEl.innerText = "Prompt ready. Click 'Start Recording' to answer.";
@@ -59,6 +87,44 @@ async function getPrompt() {
 }
 
 getBtn.addEventListener("click", getPrompt);
+
+async function newObject() {
+  if (!session || !session.session_id) {
+    statusEl.innerText = "Please get a prompt first before changing objects.";
+    return;
+  }
+
+  statusEl.innerText = "Getting new object...";
+  try {
+    const formData = new FormData();
+    formData.append("session_id", session.session_id);
+
+    const response = await fetch(`${BACKEND}/session/change-object`, {
+      method: "POST",
+      body: formData
+    });
+    if (!response.ok) throw new Error("Failed to change object");
+    const json = await response.json();
+
+    // Update session data
+    session = {
+      session_id: json.session_id,
+      prompt_text: json.prompt_text,
+      object: json.object,
+      expected_answer: json.expected_answer
+    };
+
+    promptEl.innerText = `Object: ${session.object}\nPrompt: ${session.prompt_text}`;
+    startBtn.disabled = false;
+    statusEl.innerText = "New object selected. Click 'Start Recording' to answer.";
+    resultEl.innerHTML = ""; // Clear previous results
+  } catch (e) {
+    console.error(e);
+    statusEl.innerText = "Could not change object: " + e.message;
+  }
+}
+
+newObjBtn.addEventListener("click", newObject);
 
 startBtn.addEventListener("click", async () => {
   startBtn.disabled = true;
@@ -159,7 +225,9 @@ async function uploadRecording(blob) {
 
   const form = new FormData();
   form.append("session_id", session.session_id);
-  form.append("expected_text", session.prompt_text || "");
+  form.append("object_name", session.object);
+  form.append("prompt_text", session.prompt_text);
+  form.append("expected_answer", session.expected_answer || "");
   // name the file .webm — backend will accept common formats if ffmpeg in PATH
   form.append("audio", blob, "recording.webm");
 
@@ -170,13 +238,75 @@ async function uploadRecording(blob) {
       throw new Error(`Server returned ${res.status}: ${txt}`);
     }
     const json = await res.json();
-    resultEl.innerText = JSON.stringify(json, null, 2);
+    displayResults(json);
     statusEl.innerText = "Analysis complete";
   } catch (e) {
     statusEl.innerText = "Upload failed: " + e.message;
     resultEl.innerText = "";
     console.error("upload error", e);
   }
+}
+
+function displayResults(data) {
+  // Create a formatted display of results
+  let html = "<h3>Analysis Results</h3>";
+
+  // Display transcript
+  html += `<div><strong>Transcript:</strong> ${data.transcript || "(no speech detected)"}</div>`;
+
+  // Display semantic evaluation if present
+  if (data.semantic_evaluation) {
+    const eval = data.semantic_evaluation;
+    const classColor = {
+      "correct": "#2ecc71",
+      "partial": "#f39c12",
+      "wrong": "#e74c3c"
+    }[eval.classification] || "#333";
+
+    html += `<div style="margin-top: 15px; padding: 10px; background-color: #f8f8f8; border-radius: 6px;">`;
+    html += `<h4>Semantic Evaluation</h4>`;
+    html += `<div><strong>Classification:</strong> <span style="color: ${classColor}; font-weight: bold;">${eval.classification.toUpperCase()}</span></div>`;
+    html += `<div><strong>Similarity Score:</strong> ${(eval.similarity_score * 100).toFixed(1)}%</div>`;
+    html += `<div><strong>Confidence:</strong> ${(eval.confidence * 100).toFixed(0)}%</div>`;
+    html += `<div><strong>Object Mentioned:</strong> ${eval.object_mentioned ? "Yes" : "No"}</div>`;
+    html += `<div><strong>Explanation:</strong> ${eval.explanation}</div>`;
+
+    // Display semantic features if present
+    if (eval.semantic_features) {
+      html += `<div style="margin-top: 10px;"><strong>Clinical Insights:</strong>`;
+      html += `<ul style="margin: 5px 0;">`;
+      html += `<li>Word count: ${eval.semantic_features.word_count || 0}</li>`;
+      if (eval.semantic_features.response_type) {
+        html += `<li>Response type: ${eval.semantic_features.response_type}</li>`;
+      }
+      if (eval.semantic_features.has_paraphrase) {
+        html += `<li>Paraphrasing detected (${eval.semantic_features.paraphrase_quality})</li>`;
+      }
+      if (eval.semantic_features.substituted_term) {
+        html += `<li>Word substitution: "${eval.semantic_features.substituted_term}"</li>`;
+      }
+      html += `</ul></div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Display other metrics
+  html += `<div style="margin-top: 15px;">`;
+  html += `<h4>Speech Metrics</h4>`;
+  if (data.wer !== null) {
+    html += `<div><strong>Word Error Rate (WER):</strong> ${(data.wer * 100).toFixed(1)}%</div>`;
+  }
+  html += `<div><strong>Speech Rate:</strong> ${data.speech_rate ? data.speech_rate.toFixed(1) : "N/A"} words/min</div>`;
+  html += `<div><strong>Pause Ratio:</strong> ${data.pause_ratio ? (data.pause_ratio * 100).toFixed(1) : "N/A"}%</div>`;
+  html += `</div>`;
+
+  // Show raw JSON in collapsible section
+  html += `<details style="margin-top: 15px;">`;
+  html += `<summary style="cursor: pointer;">Raw JSON Response</summary>`;
+  html += `<pre style="margin-top: 10px;">${JSON.stringify(data, null, 2)}</pre>`;
+  html += `</details>`;
+
+  resultEl.innerHTML = html;
 }
 </script>
 </body>

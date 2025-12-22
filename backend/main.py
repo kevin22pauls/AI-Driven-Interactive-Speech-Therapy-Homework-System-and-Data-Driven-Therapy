@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from routers import analysis
 from models.whisper_model import load_whisper_model
 from database import schema
+import os
 
 app = FastAPI(title="Speech Therapy AI Backend")
 
@@ -23,3 +25,12 @@ def startup_event():
     print("Backend ready")
 
 app.include_router(analysis.router)
+
+@app.get("/")
+def read_root():
+    """Serve the frontend HTML file."""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "recorder.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    else:
+        return {"message": "Frontend not found. Visit /docs for API documentation."}
