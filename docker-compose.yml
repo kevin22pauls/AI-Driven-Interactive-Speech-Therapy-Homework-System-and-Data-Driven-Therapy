@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # Gentle Forced Aligner Service
+  # Provides phoneme-level forced alignment for speech analysis
+  gentle:
+    image: lowerquality/gentle
+    container_name: speech-therapy-gentle
+    ports:
+      - "8765:8765"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - speech-therapy-network
+
+networks:
+  speech-therapy-network:
+    driver: bridge

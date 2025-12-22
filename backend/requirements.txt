@@ -12,3 +12,6 @@ silero-vad
 jiwer
 sentence-transformers
 soundfile
+editdistance
+requests
+scikit-learn

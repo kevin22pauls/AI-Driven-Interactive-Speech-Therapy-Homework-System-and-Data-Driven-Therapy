@@ -290,6 +290,76 @@ function displayResults(data) {
     html += `</div>`;
   }
 
+  // Display phoneme analysis if present
+  if (data.phoneme_analysis && !data.phoneme_analysis.error) {
+    const phoneme = data.phoneme_analysis;
+    html += `<div style="margin-top: 15px; padding: 10px; background-color: #e8f4f8; border-radius: 6px;">`;
+    html += `<h4>Phoneme-Level Analysis</h4>`;
+    html += `<div><strong>Phoneme Error Rate (PER):</strong> ${(phoneme.per * 100).toFixed(1)}%</div>`;
+    html += `<div><strong>Total Phonemes:</strong> ${phoneme.total_phonemes}</div>`;
+    html += `<div><strong>Errors Detected:</strong> ${phoneme.error_count}</div>`;
+
+    // Error breakdown
+    if (phoneme.error_summary) {
+      html += `<div style="margin-top: 8px;"><strong>Error Types:</strong>`;
+      html += `<ul style="margin: 5px 0;">`;
+      if (phoneme.error_summary.substitution > 0) {
+        html += `<li>Substitutions: ${phoneme.error_summary.substitution}</li>`;
+      }
+      if (phoneme.error_summary.deletion > 0) {
+        html += `<li>Deletions: ${phoneme.error_summary.deletion}</li>`;
+      }
+      if (phoneme.error_summary.insertion > 0) {
+        html += `<li>Insertions: ${phoneme.error_summary.insertion}</li>`;
+      }
+      html += `</ul></div>`;
+    }
+
+    // Problematic phonemes
+    if (phoneme.problematic_phonemes && Object.keys(phoneme.problematic_phonemes).length > 0) {
+      html += `<div style="margin-top: 8px;"><strong>Problematic Phonemes:</strong> `;
+      const problems = Object.entries(phoneme.problematic_phonemes)
+        .map(([ph, count]) => `${ph} (${count}x)`)
+        .join(', ');
+      html += `${problems}</div>`;
+    }
+
+    // Clinical notes
+    if (phoneme.clinical_notes && phoneme.clinical_notes.length > 0) {
+      html += `<div style="margin-top: 10px; padding: 8px; background-color: #fff3cd; border-left: 3px solid #ffc107;">`;
+      html += `<strong>Clinical Insights:</strong>`;
+      html += `<ul style="margin: 5px 0;">`;
+      phoneme.clinical_notes.forEach(note => {
+        html += `<li>${note}</li>`;
+      });
+      html += `</ul></div>`;
+    }
+
+    // Detailed errors (collapsible)
+    if (phoneme.errors && phoneme.errors.length > 0) {
+      html += `<details style="margin-top: 10px;">`;
+      html += `<summary style="cursor: pointer; font-weight: bold;">Detailed Phoneme Errors (${phoneme.errors.length})</summary>`;
+      html += `<table style="width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12px;">`;
+      html += `<tr style="background-color: #f0f0f0;"><th>Type</th><th>Word</th><th>Expected</th><th>Actual</th><th>Position</th></tr>`;
+      phoneme.errors.forEach(err => {
+        const errorTypeColor = {
+          'substitution': '#ff9800',
+          'deletion': '#f44336',
+          'insertion': '#2196f3'
+        }[err.type] || '#333';
+        html += `<tr style="border-bottom: 1px solid #ddd;">`;
+        html += `<td style="padding: 4px; color: ${errorTypeColor}; font-weight: bold;">${err.type}</td>`;
+        html += `<td style="padding: 4px;">${err.word || '-'}</td>`;
+        html += `<td style="padding: 4px;">${err.expected || '-'}</td>`;
+        html += `<td style="padding: 4px;">${err.actual || '-'}</td>`;
+        html += `<td style="padding: 4px;">${err.position}</td>`;
+        html += `</tr>`;
+      });
+      html += `</table></details>`;
+    }
+    html += `</div>`;
+  }
+
   // Display other metrics
   html += `<div style="margin-top: 15px;">`;
   html += `<h4>Speech Metrics</h4>`;

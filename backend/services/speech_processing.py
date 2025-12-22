@@ -4,6 +4,7 @@ from models.whisper_model import get_whisper_model
 from services.metrics import compute_wer, compute_speech_rate, compute_pause_ratio
 from services.semantic_analysis import evaluate_answer
 from services.prompts import get_question_type
+from services.phoneme_analysis import analyze_phonemes, format_phoneme_result_for_api
 import logging
 
 logger = logging.getLogger(__name__)
@@ -78,5 +79,30 @@ def analyze_speech(audio_path: str, prompt_data: Optional[Dict] = None):
         logger.info(f"Semantic evaluation - Classification: {semantic_results['classification']}, "
                    f"Score: {semantic_results['similarity_score']:.2f}, "
                    f"Object: {prompt_data['object_name']}")
+
+    # Add phoneme-level analysis if expected answer is provided
+    if prompt_data and prompt_data.get("expected_answer"):
+        try:
+            logger.info("Performing phoneme-level analysis")
+            phoneme_result = analyze_phonemes(
+                expected_text=prompt_data["expected_answer"],
+                actual_text=transcript,
+                audio_path=audio_path
+            )
+
+            # Format for API response
+            result["phoneme_analysis"] = format_phoneme_result_for_api(phoneme_result)
+
+            logger.info(f"Phoneme analysis - PER: {phoneme_result.per:.2f}, "
+                       f"Errors: {len(phoneme_result.errors)}, "
+                       f"Total phonemes: {phoneme_result.total_phonemes}")
+
+        except Exception as e:
+            logger.error(f"Phoneme analysis failed: {e}", exc_info=True)
+            # Don't fail the whole analysis if phoneme analysis fails
+            result["phoneme_analysis"] = {
+                "error": "Phoneme analysis unavailable",
+                "reason": str(e)
+            }
 
     return result
