@@ -10,15 +10,18 @@ An intelligent speech therapy system for aphasia patients and speech disorders, 
 
 ## 🎯 Overview
 
-This system provides **multi-level speech analysis**:
+This system provides **multi-level speech analysis** with **longitudinal tracking**:
 - **Word-level**: WER, speech rate, pause ratio
 - **Phoneme-level**: PER, error classification, problematic sounds
+- **Fluency-level**: LFR, stuttering detection, dysfluency metrics
 - **Semantic-level**: Answer correctness, paraphrasing detection
+- **Progress tracking**: Therapist dashboard with trend visualization
 
-**Example**: When a patient says "bootle" instead of "bottle", the system identifies:
-- PER: 20%
-- Error: `AA → UW` substitution at phoneme position 1
-- Clinical insight: "Consider vowel discrimination exercises"
+**Example**: When a patient says "bootle" instead of "bottle", the system:
+- Identifies: PER: 20%, Error: `AA → UW` substitution at phoneme position 1
+- Tracks: Patient has made this error 3 times across 5 sessions
+- Recommends: "Consider vowel discrimination exercises"
+- Visualizes: Progress chart showing AA error rate decreasing over time
 
 ---
 
@@ -48,11 +51,19 @@ This system provides **multi-level speech analysis**:
 - Paraphrase detection
 - Object identification verification
 
-### 💻 User-Friendly Interface
+### 💻 Dual User Interfaces
+**Patient Interface** (recorder.html):
 - Browser-based recording
 - Real-time feedback
 - Color-coded results
 - Detailed error visualization
+
+**Therapist Dashboard** (dashboard.html) - NEW:
+- Patient progress visualization
+- Interactive Chart.js charts (LFR, PER, fluency trends)
+- Clinical insights with automated recommendations
+- Session drill-down for detailed analysis
+- Problematic phoneme identification
 
 ---
 
@@ -89,14 +100,15 @@ uvicorn main:app --reload --port 8000
 
 5. **Open the frontend**
 ```
-Open backend/frontend/recorder.html in your web browser
+Patient Interface: Open backend/frontend/recorder.html in your web browser
+Therapist Dashboard: Open backend/frontend/dashboard.html in your web browser
 ```
 
 ---
 
 ## 📖 Usage
 
-### Basic Workflow
+### Patient Workflow (recorder.html)
 
 1. **Click "Get Prompt"** → System provides a prompt (e.g., "What is this object?")
 2. **Click "Start Recording"** → Speak your answer
@@ -105,13 +117,36 @@ Open backend/frontend/recorder.html in your web browser
    - Transcript
    - Semantic evaluation (✓ correct / ⚠️ partial / ✗ wrong)
    - **Phoneme Error Rate (PER)**
+   - **Longest Fluent Run (LFR)**
+   - **Fluency percentage & stuttering events**
    - **Problematic phonemes** (e.g., "AA: 2 errors")
    - **Clinical insights** (e.g., "Focus on fricative production")
-   - Detailed error table
+   - Detailed error tables
 
 5. **Continue Session**:
    - "Get Prompt" → Another prompt for same object
    - "New Object" → Switch to different object
+
+### Therapist Workflow (dashboard.html) - NEW
+
+1. **Enter Patient ID** (e.g., "john_doe", "patient123")
+2. **Load Dashboard** → Click "Load Patient Data"
+3. **View Summary**:
+   - Metric cards: Total recordings, avg PER, avg LFR, avg fluency
+   - Clinical insights with automated recommendations
+4. **Analyze Trends**:
+   - LFR trend chart (is fluency improving?)
+   - PER trend chart (is pronunciation improving?)
+   - Fluency percentage trend
+   - Problematic phonemes bar chart
+5. **Review Sessions**:
+   - Scroll to sessions table
+   - Click any row to expand details
+   - View transcript, metrics, phoneme errors, stuttering events
+6. **Identify Focus Areas**:
+   - Check clinical insights panel
+   - Review most problematic phonemes
+   - Plan next therapy session based on data
 
 ---
 

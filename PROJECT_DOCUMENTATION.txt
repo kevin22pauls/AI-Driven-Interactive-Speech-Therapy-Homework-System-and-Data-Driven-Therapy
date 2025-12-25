@@ -147,7 +147,27 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    ✓ Multi-prompt sessions without changing objects
    ✓ Dynamic object switching
 
-8. USER INTERFACE
+8. THERAPIST DASHBOARD ⭐⭐⭐ NEW
+   ✓ Patient progress visualization dashboard
+   ✓ Interactive Chart.js visualizations:
+      - LFR trend over time (line chart)
+      - PER trend over time (line chart)
+      - Fluency percentage trend (line chart)
+      - Most problematic phonemes (bar chart, top 10)
+   ✓ Clinical insights panel with automated recommendations
+   ✓ Summary metric cards (total recordings, avg PER, avg LFR, avg fluency)
+   ✓ Recent sessions table with expandable details
+   ✓ Session drill-down showing:
+      - Full transcript and all metrics
+      - Detailed phoneme errors list
+      - Stuttering events breakdown
+      - Clinical notes per recording
+   ✓ Patient selector with real-time data loading
+   ✓ Refresh capability for updated data
+   ✓ Responsive design for mobile/tablet/desktop
+   ✓ Color-coded insights (positive, neutral, focus areas)
+
+9. USER INTERFACE (Patient/Recorder)
    ✓ Browser-based audio recording
    ✓ Automatic silence detection (VAD)
    ✓ Real-time status updates
@@ -164,7 +184,7 @@ SUCCESSFULLY IMPLEMENTED FEATURES
       - Pause details ⭐ NEW
    ✓ Session management buttons
 
-8. DATABASE & STORAGE
+10. DATABASE & STORAGE
    ✓ SQLite database with comprehensive schema
    ✓ Recordings table with all metrics
    ✓ Patient phoneme history tracking
@@ -280,7 +300,8 @@ FINAL PROJECT/
 │   │   └── file_utils.py            # File management
 │   │
 │   ├── frontend/
-│   │   └── recorder.html            # ⭐ Updated UI with phoneme display
+│   │   ├── recorder.html            # ⭐ Patient recording interface
+│   │   └── dashboard.html           # ⭐⭐⭐ NEW: Therapist progress dashboard
 │   │
 │   ├── storage/
 │   │   └── audio/                   # Audio recordings (gitignored)
@@ -467,9 +488,10 @@ SETUP:
    uvicorn main:app --reload --port 8000
 
 4. Open frontend:
-   Open backend/frontend/recorder.html in a web browser
+   - Patient Interface: Open backend/frontend/recorder.html in a web browser
+   - Therapist Dashboard: Open backend/frontend/dashboard.html in a web browser
 
-WORKFLOW:
+PATIENT WORKFLOW (recorder.html):
 
 1. Click "Get Prompt" to start a session
 2. Read the prompt aloud (e.g., "What is this object?")
@@ -485,6 +507,35 @@ WORKFLOW:
 
 6. Click "Get Prompt" again for another prompt with same object
 7. Click "New Object" to switch to a different object
+
+THERAPIST WORKFLOW (dashboard.html): ⭐⭐⭐ NEW
+
+1. Enter patient ID (e.g., "john_doe", "patient123")
+2. Click "Load Patient Data" to fetch progress metrics
+3. View Summary Dashboard:
+   - Metric Cards: Total recordings, avg PER, avg LFR, avg fluency
+   - Clinical Insights: Automated recommendations based on progress
+   - Charts: LFR trend, PER trend, fluency trend, problematic phonemes
+4. Analyze Progress Trends:
+   - Check if LFR is increasing over time (improvement in fluency)
+   - Check if PER is decreasing over time (improvement in pronunciation)
+   - Identify which phonemes need focused practice
+5. Review Recent Sessions:
+   - Scroll to sessions table at bottom
+   - Click any session row to expand details
+   - View full transcript, metrics, phoneme errors, stuttering events
+6. Identify Focus Areas:
+   - Read clinical insights for automated recommendations
+   - Check "Most Problematic Phonemes" chart
+   - Plan next therapy session based on data
+7. Click "Refresh" to update with latest data
+
+Dashboard Features:
+- Real-time data loading from API
+- Interactive charts with tooltips (hover to see details)
+- Color-coded insights (green = positive, yellow = neutral, red = focus)
+- Expandable session details for deep-dive analysis
+- Responsive design works on desktop, tablet, mobile
 
 
 API ENDPOINTS

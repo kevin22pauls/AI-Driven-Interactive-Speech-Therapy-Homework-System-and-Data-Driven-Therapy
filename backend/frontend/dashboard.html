@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Therapist Dashboard - Speech Therapy System</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f7fa;
+      color: #2c3e50;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px 20px;
+      margin-bottom: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .patient-selector {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .patient-selector label {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .patient-selector input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 15px;
+      border: 2px solid #e1e8ed;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .patient-selector input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .patient-selector button {
+      padding: 10px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .patient-selector button:hover {
+      background: #5568d3;
+    }
+
+    .patient-selector button:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+    }
+
+    .metric-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .metric-card {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-left: 4px solid;
+    }
+
+    .metric-card.per { border-left-color: #f39c12; }
+    .metric-card.lfr { border-left-color: #3498db; }
+    .metric-card.fluency { border-left-color: #2ecc71; }
+    .metric-card.recordings { border-left-color: #9b59b6; }
+
+    .metric-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #718096;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .metric-unit {
+      font-size: 14px;
+      color: #a0aec0;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .chart-container {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .chart-container h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 300px;
+    }
+
+    .insights-panel {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      margin-bottom: 30px;
+    }
+
+    .insights-panel h3 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .insight-item {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: flex;
+      align-items: start;
+      gap: 10px;
+    }
+
+    .insight-item.positive {
+      background: #d4edda;
+      border-left: 3px solid #28a745;
+    }
+
+    .insight-item.neutral {
+      background: #fff3cd;
+      border-left: 3px solid #ffc107;
+    }
+
+    .insight-item.focus {
+      background: #f8d7da;
+      border-left: 3px solid #dc3545;
+    }
+
+    .insight-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .sessions-table {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .sessions-table h3 {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #f7fafc;
+      padding: 12px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #718096;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    td {
+      padding: 14px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 14px;
+    }
+
+    tr:hover {
+      background: #f7fafc;
+      cursor: pointer;
+    }
+
+    .session-row.expanded {
+      background: #edf2f7;
+    }
+
+    .session-details {
+      display: none;
+      padding: 20px;
+      background: #f7fafc;
+      border-left: 3px solid #667eea;
+    }
+
+    .session-details.show {
+      display: block;
+    }
+
+    .recording-item {
+      background: white;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      border-left: 3px solid #cbd5e0;
+    }
+
+    .recording-item.correct { border-left-color: #2ecc71; }
+    .recording-item.partial { border-left-color: #f39c12; }
+    .recording-item.wrong { border-left-color: #e74c3c; }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge.correct { background: #d4edda; color: #155724; }
+    .badge.partial { background: #fff3cd; color: #856404; }
+    .badge.wrong { background: #f8d7da; color: #721c24; }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #718096;
+      font-size: 14px;
+    }
+
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 16px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      border-left: 3px solid #dc3545;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #718096;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    @media (max-width: 768px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .container {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🩺 Therapist Dashboard</h1>
+      <p class="subtitle">Track patient progress and identify focus areas for therapy</p>
+    </header>
+
+    <div class="patient-selector">
+      <label for="patientId">Patient ID:</label>
+      <input
+        type="text"
+        id="patientId"
+        placeholder="Enter patient ID (e.g., john_doe, patient123)"
+        autocomplete="off"
+      />
+      <button id="loadPatient">Load Patient Data</button>
+      <button id="refreshData" style="display: none; background: #48bb78;">Refresh</button>
+    </div>
+
+    <div id="errorContainer"></div>
+    <div id="dashboardContent" style="display: none;">
+
+      <!-- Metric Cards -->
+      <div class="metric-cards">
+        <div class="metric-card recordings">
+          <div class="metric-label">Total Recordings</div>
+          <div class="metric-value" id="totalRecordings">0</div>
+          <div class="metric-unit">sessions completed</div>
+        </div>
+        <div class="metric-card per">
+          <div class="metric-label">Average PER</div>
+          <div class="metric-value" id="avgPER">0%</div>
+          <div class="metric-unit">phoneme error rate</div>
+        </div>
+        <div class="metric-card lfr">
+          <div class="metric-label">Average LFR</div>
+          <div class="metric-value" id="avgLFR">0</div>
+          <div class="metric-unit">longest fluent run</div>
+        </div>
+        <div class="metric-card fluency">
+          <div class="metric-label">Average Fluency</div>
+          <div class="metric-value" id="avgFluency">0%</div>
+          <div class="metric-unit">fluency percentage</div>
+        </div>
+      </div>
+
+      <!-- Clinical Insights -->
+      <div class="insights-panel">
+        <h3>📊 Clinical Insights & Recommendations</h3>
+        <div id="insightsContainer">
+          <div class="loading">Analyzing patient data...</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-grid">
+        <div class="chart-container">
+          <h3>📈 Longest Fluent Run (LFR) Trend</h3>
+          <div class="chart-wrapper">
+            <canvas id="lfrChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-container">
+          <h3>📉 Phoneme Error Rate (PER) Trend</h3>
+          <div class="chart-wrapper">
+            <canvas id="perChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-container">
+          <h3>🎯 Most Problematic Phonemes</h3>
+          <div class="chart-wrapper">
+            <canvas id="phonemeChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-container">
+          <h3>📊 Fluency Percentage Trend</h3>
+          <div class="chart-wrapper">
+            <canvas id="fluencyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Sessions Table -->
+      <div class="sessions-table">
+        <h3>📝 Recent Sessions</h3>
+        <table id="sessionsTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Object</th>
+              <th>Transcript</th>
+              <th>PER</th>
+              <th>LFR</th>
+              <th>Fluency</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="sessionsBody">
+            <tr><td colspan="7" class="loading">Loading sessions...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="loadingState" class="loading">
+      Enter a patient ID above to view their progress dashboard
+    </div>
+  </div>
+
+  <script>
+    /* ======== CONFIG ======== */
+    const BACKEND = "http://127.0.0.1:8000";
+    /* ======================== */
+
+    let currentPatientId = null;
+    let charts = {};
+
+    // DOM Elements
+    const patientInput = document.getElementById('patientId');
+    const loadButton = document.getElementById('loadPatient');
+    const refreshButton = document.getElementById('refreshData');
+    const errorContainer = document.getElementById('errorContainer');
+    const dashboardContent = document.getElementById('dashboardContent');
+    const loadingState = document.getElementById('loadingState');
+
+    // Event Listeners
+    loadButton.addEventListener('click', loadPatientData);
+    refreshButton.addEventListener('click', () => loadPatientData(currentPatientId));
+    patientInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loadPatientData();
+    });
+
+    async function loadPatientData(patientId = null) {
+      const pid = patientId || patientInput.value.trim();
+
+      if (!pid) {
+        showError('Please enter a patient ID');
+        return;
+      }
+
+      currentPatientId = pid;
+      clearError();
+      showLoading();
+
+      try {
+        // Fetch patient progress data
+        const progressResponse = await fetch(`${BACKEND}/patient/${pid}/progress`);
+
+        if (!progressResponse.ok) {
+          throw new Error(`Failed to load patient data: ${progressResponse.statusText}`);
+        }
+
+        const progressData = await progressResponse.json();
+
+        // Fetch patient history
+        const historyResponse = await fetch(`${BACKEND}/patient/${pid}/history?limit=50`);
+        const historyData = await historyResponse.json();
+
+        // Display dashboard
+        displayDashboard(progressData, historyData);
+
+        // Show refresh button
+        refreshButton.style.display = 'inline-block';
+
+      } catch (error) {
+        console.error('Error loading patient data:', error);
+        showError(`Failed to load patient data: ${error.message}`);
+        hideLoading();
+      }
+    }
+
+    function displayDashboard(progress, history) {
+      loadingState.style.display = 'none';
+      dashboardContent.style.display = 'block';
+
+      // Update metric cards
+      document.getElementById('totalRecordings').textContent = progress.total_recordings || 0;
+      document.getElementById('avgPER').textContent =
+        progress.avg_per ? `${(progress.avg_per * 100).toFixed(1)}%` : 'N/A';
+      document.getElementById('avgLFR').textContent =
+        progress.avg_lfr ? Math.round(progress.avg_lfr) : 'N/A';
+      document.getElementById('avgFluency').textContent =
+        progress.avg_fluency ? `${progress.avg_fluency.toFixed(1)}%` : 'N/A';
+
+      // Generate clinical insights
+      generateInsights(progress, history);
+
+      // Create charts
+      createLFRChart(progress.lfr_trend || []);
+      createPERChart(history.recordings || []);
+      createPhonemeChart(progress.most_problematic_phonemes || []);
+      createFluencyChart(progress.lfr_trend || []);
+
+      // Display sessions table
+      displaySessionsTable(history.recordings || []);
+    }
+
+    function generateInsights(progress, history) {
+      const container = document.getElementById('insightsContainer');
+      container.innerHTML = '';
+
+      const insights = [];
+
+      // Check for improvement in LFR
+      if (progress.lfr_trend && progress.lfr_trend.length >= 2) {
+        const firstLFR = progress.lfr_trend[0].avg_lfr;
+        const lastLFR = progress.lfr_trend[progress.lfr_trend.length - 1].avg_lfr;
+        const improvement = lastLFR - firstLFR;
+
+        if (improvement > 1) {
+          insights.push({
+            type: 'positive',
+            icon: '✅',
+            text: `LFR improved from ${firstLFR.toFixed(1)} to ${lastLFR.toFixed(1)} words (${improvement > 0 ? '+' : ''}${improvement.toFixed(1)} improvement)`
+          });
+        } else if (improvement < -1) {
+          insights.push({
+            type: 'focus',
+            icon: '⚠️',
+            text: `LFR decreased from ${firstLFR.toFixed(1)} to ${lastLFR.toFixed(1)} words - may need intervention`
+          });
+        }
+      }
+
+      // Identify problematic phonemes
+      if (progress.most_problematic_phonemes && progress.most_problematic_phonemes.length > 0) {
+        const top3 = progress.most_problematic_phonemes.slice(0, 3);
+        const phonemeList = top3.map(p => `/${p.phoneme}/`).join(', ');
+        insights.push({
+          type: 'focus',
+          icon: '🎯',
+          text: `Focus areas: ${phonemeList} sounds show highest error rates`
+        });
+
+        // If error rate is decreasing for any phoneme
+        const improvingPhonemes = progress.most_problematic_phonemes.filter(p => p.error_rate < 0.3);
+        if (improvingPhonemes.length > 0 && improvingPhonemes.length < top3.length) {
+          insights.push({
+            type: 'positive',
+            icon: '📈',
+            text: `Progress on ${improvingPhonemes.map(p => `/${p.phoneme}/`).join(', ')} with error rates below 30%`
+          });
+        }
+      }
+
+      // Fluency assessment
+      if (progress.avg_fluency) {
+        if (progress.avg_fluency >= 80) {
+          insights.push({
+            type: 'positive',
+            icon: '🌟',
+            text: `Excellent fluency at ${progress.avg_fluency.toFixed(1)}% - patient shows strong fluent speech`
+          });
+        } else if (progress.avg_fluency < 60) {
+          insights.push({
+            type: 'focus',
+            icon: '💪',
+            text: `Fluency at ${progress.avg_fluency.toFixed(1)}% - consider fluency-building exercises`
+          });
+        }
+      }
+
+      // PER assessment
+      if (progress.avg_per) {
+        if (progress.avg_per < 0.1) {
+          insights.push({
+            type: 'positive',
+            icon: '🎉',
+            text: `Low PER at ${(progress.avg_per * 100).toFixed(1)}% - excellent pronunciation accuracy`
+          });
+        } else if (progress.avg_per > 0.2) {
+          insights.push({
+            type: 'neutral',
+            icon: '📝',
+            text: `Moderate PER at ${(progress.avg_per * 100).toFixed(1)}% - continue phoneme-focused therapy`
+          });
+        }
+      }
+
+      // Object performance
+      if (progress.object_performance && progress.object_performance.length > 0) {
+        const bestObject = progress.object_performance[0];
+        const worstObject = progress.object_performance[progress.object_performance.length - 1];
+
+        if (progress.object_performance.length > 1) {
+          insights.push({
+            type: 'neutral',
+            icon: '📚',
+            text: `Best performance on "${bestObject.object_name}" (${(bestObject.avg_semantic_score * 100).toFixed(0)}%), more practice needed on "${worstObject.object_name}"`
+          });
+        }
+      }
+
+      // Default message if no insights
+      if (insights.length === 0) {
+        insights.push({
+          type: 'neutral',
+          icon: 'ℹ️',
+          text: 'Collect more data to generate clinical insights and recommendations'
+        });
+      }
+
+      // Render insights
+      insights.forEach(insight => {
+        const item = document.createElement('div');
+        item.className = `insight-item ${insight.type}`;
+        item.innerHTML = `
+          <span class="insight-icon">${insight.icon}</span>
+          <span>${insight.text}</span>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function createLFRChart(trendData) {
+      const ctx = document.getElementById('lfrChart');
+
+      if (charts.lfr) {
+        charts.lfr.destroy();
+      }
+
+      const labels = trendData.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      const data = trendData.map(d => d.avg_lfr);
+
+      charts.lfr = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Average LFR',
+            data: data,
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `LFR: ${context.parsed.y.toFixed(1)} words`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Words' }
+            },
+            x: {
+              title: { display: true, text: 'Date' }
+            }
+          }
+        }
+      });
+    }
+
+    function createPERChart(recordings) {
+      const ctx = document.getElementById('perChart');
+
+      if (charts.per) {
+        charts.per.destroy();
+      }
+
+      // Group by date and calculate average PER
+      const perByDate = {};
+      recordings.forEach(rec => {
+        if (rec.per != null) {
+          const date = new Date(rec.created_at).toLocaleDateString();
+          if (!perByDate[date]) {
+            perByDate[date] = { sum: 0, count: 0 };
+          }
+          perByDate[date].sum += rec.per;
+          perByDate[date].count++;
+        }
+      });
+
+      const sortedDates = Object.keys(perByDate).sort((a, b) => new Date(a) - new Date(b));
+      const labels = sortedDates.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      const data = sortedDates.map(d => (perByDate[d].sum / perByDate[d].count) * 100);
+
+      charts.per = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Average PER',
+            data: data,
+            borderColor: '#f39c12',
+            backgroundColor: 'rgba(243, 156, 18, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `PER: ${context.parsed.y.toFixed(1)}%`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Error Rate (%)' }
+            },
+            x: {
+              title: { display: true, text: 'Date' }
+            }
+          }
+        }
+      });
+    }
+
+    function createPhonemeChart(phonemes) {
+      const ctx = document.getElementById('phonemeChart');
+
+      if (charts.phoneme) {
+        charts.phoneme.destroy();
+      }
+
+      const top10 = phonemes.slice(0, 10);
+      const labels = top10.map(p => p.phoneme);
+      const data = top10.map(p => (p.error_rate * 100).toFixed(1));
+
+      charts.phoneme = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Error Rate',
+            data: data,
+            backgroundColor: [
+              '#e74c3c', '#e67e22', '#f39c12', '#f1c40f', '#2ecc71',
+              '#1abc9c', '#3498db', '#9b59b6', '#34495e', '#95a5a6'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `Error Rate: ${context.parsed.y}%`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Error Rate (%)' }
+            },
+            x: {
+              title: { display: true, text: 'Phoneme' }
+            }
+          }
+        }
+      });
+    }
+
+    function createFluencyChart(trendData) {
+      const ctx = document.getElementById('fluencyChart');
+
+      if (charts.fluency) {
+        charts.fluency.destroy();
+      }
+
+      const labels = trendData.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      const data = trendData.map(d => d.avg_fluency);
+
+      charts.fluency = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Average Fluency',
+            data: data,
+            borderColor: '#2ecc71',
+            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => `Fluency: ${context.parsed.y.toFixed(1)}%`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              title: { display: true, text: 'Fluency (%)' }
+            },
+            x: {
+              title: { display: true, text: 'Date' }
+            }
+          }
+        }
+      });
+    }
+
+    function displaySessionsTable(recordings) {
+      const tbody = document.getElementById('sessionsBody');
+      tbody.innerHTML = '';
+
+      if (recordings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No recordings found for this patient</td></tr>';
+        return;
+      }
+
+      // Sort by date (newest first)
+      const sorted = recordings.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      sorted.forEach((rec, index) => {
+        const row = document.createElement('tr');
+        row.className = 'session-row';
+        row.dataset.index = index;
+
+        const date = new Date(rec.created_at).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const transcript = rec.transcript || 'N/A';
+        const truncated = transcript.length > 40 ? transcript.substring(0, 40) + '...' : transcript;
+
+        const per = rec.per != null ? `${(rec.per * 100).toFixed(1)}%` : 'N/A';
+        const lfr = rec.longest_fluent_run != null ? rec.longest_fluent_run : 'N/A';
+        const fluency = rec.fluency_percentage != null ? `${rec.fluency_percentage.toFixed(1)}%` : 'N/A';
+
+        const classification = rec.semantic_classification || 'N/A';
+        const badgeClass = classification.toLowerCase();
+
+        row.innerHTML = `
+          <td>${date}</td>
+          <td><strong>${rec.object_name || 'N/A'}</strong></td>
+          <td title="${transcript}">${truncated}</td>
+          <td>${per}</td>
+          <td>${lfr}</td>
+          <td>${fluency}</td>
+          <td><span class="badge ${badgeClass}">${classification}</span></td>
+        `;
+
+        row.addEventListener('click', () => toggleSessionDetails(index, rec));
+        tbody.appendChild(row);
+
+        // Create details row
+        const detailsRow = document.createElement('tr');
+        detailsRow.id = `details-${index}`;
+        detailsRow.innerHTML = `<td colspan="7"><div class="session-details" id="session-details-${index}"></div></td>`;
+        tbody.appendChild(detailsRow);
+      });
+    }
+
+    function toggleSessionDetails(index, recording) {
+      const detailsDiv = document.getElementById(`session-details-${index}`);
+      const row = document.querySelector(`tr.session-row[data-index="${index}"]`);
+
+      if (detailsDiv.classList.contains('show')) {
+        detailsDiv.classList.remove('show');
+        row.classList.remove('expanded');
+      } else {
+        // Hide all other details
+        document.querySelectorAll('.session-details.show').forEach(el => {
+          el.classList.remove('show');
+        });
+        document.querySelectorAll('.session-row.expanded').forEach(el => {
+          el.classList.remove('expanded');
+        });
+
+        // Show this one
+        detailsDiv.classList.add('show');
+        row.classList.add('expanded');
+        renderSessionDetails(detailsDiv, recording);
+      }
+    }
+
+    function renderSessionDetails(container, rec) {
+      let html = '<div style="margin-bottom: 16px;">';
+
+      // Full transcript
+      html += `<h4 style="margin: 0 0 8px 0; font-size: 14px;">Full Transcript:</h4>`;
+      html += `<div style="background: white; padding: 12px; border-radius: 4px; margin-bottom: 16px;">${rec.transcript || 'N/A'}</div>`;
+
+      // Metrics
+      html += `<h4 style="margin: 0 0 8px 0; font-size: 14px;">Metrics:</h4>`;
+      html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px;">`;
+      html += `<div><strong>WER:</strong> ${rec.wer != null ? `${(rec.wer * 100).toFixed(1)}%` : 'N/A'}</div>`;
+      html += `<div><strong>PER:</strong> ${rec.per != null ? `${(rec.per * 100).toFixed(1)}%` : 'N/A'}</div>`;
+      html += `<div><strong>Speech Rate:</strong> ${rec.speech_rate != null ? `${rec.speech_rate.toFixed(1)} WPM` : 'N/A'}</div>`;
+      html += `<div><strong>Pause Ratio:</strong> ${rec.pause_ratio != null ? `${(rec.pause_ratio * 100).toFixed(1)}%` : 'N/A'}</div>`;
+      html += `</div>`;
+
+      // Phoneme errors
+      if (rec.phoneme_errors && rec.phoneme_errors.length > 0) {
+        html += `<h4 style="margin: 16px 0 8px 0; font-size: 14px;">Phoneme Errors (${rec.phoneme_errors.length}):</h4>`;
+        rec.phoneme_errors.slice(0, 5).forEach(err => {
+          html += `<div style="background: white; padding: 8px; margin-bottom: 4px; border-radius: 4px; font-size: 12px;">`;
+          html += `<strong>${err.error_type}:</strong> `;
+          if (err.error_type === 'substitution') {
+            html += `/${err.expected_phoneme}/ → /${err.actual_phoneme}/ in "${err.word}"`;
+          } else if (err.error_type === 'deletion') {
+            html += `Missing /${err.expected_phoneme}/ in "${err.word}"`;
+          } else {
+            html += `Extra /${err.actual_phoneme}/ in "${err.word}"`;
+          }
+          html += `</div>`;
+        });
+        if (rec.phoneme_errors.length > 5) {
+          html += `<div style="font-size: 12px; color: #718096; margin-top: 4px;">... and ${rec.phoneme_errors.length - 5} more</div>`;
+        }
+      }
+
+      // Stuttering events
+      if (rec.stuttering_events && rec.stuttering_events.length > 0) {
+        html += `<h4 style="margin: 16px 0 8px 0; font-size: 14px;">Stuttering Events (${rec.stuttering_events.length}):</h4>`;
+        rec.stuttering_events.forEach(event => {
+          html += `<div style="background: white; padding: 8px; margin-bottom: 4px; border-radius: 4px; font-size: 12px;">`;
+          html += `<strong>${event.event_type}:</strong> "${event.word}"`;
+          if (event.repetition_count) {
+            html += ` (${event.repetition_count}x)`;
+          }
+          html += `</div>`;
+        });
+      }
+
+      // Clinical notes
+      if (rec.fluency_notes && rec.fluency_notes.length > 0) {
+        html += `<h4 style="margin: 16px 0 8px 0; font-size: 14px;">Clinical Notes:</h4>`;
+        rec.fluency_notes.forEach(note => {
+          html += `<div style="background: #fff3cd; padding: 8px; margin-bottom: 4px; border-radius: 4px; font-size: 12px; border-left: 3px solid #ffc107;">${note}</div>`;
+        });
+      }
+
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function showError(message) {
+      errorContainer.innerHTML = `<div class="error">${message}</div>`;
+    }
+
+    function clearError() {
+      errorContainer.innerHTML = '';
+    }
+
+    function showLoading() {
+      dashboardContent.style.display = 'none';
+      loadingState.style.display = 'block';
+      loadingState.innerHTML = '<div class="loading">Loading patient data...</div>';
+    }
+
+    function hideLoading() {
+      loadingState.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
