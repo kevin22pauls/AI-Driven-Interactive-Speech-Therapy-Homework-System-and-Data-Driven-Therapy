@@ -6,6 +6,46 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; max-width:700px; }
     h2 { margin-bottom: 6px; }
+    .patient-id-section {
+      background: #f0f8ff;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      border-left: 4px solid #4a90e2;
+    }
+    .patient-id-section label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .patient-id-section input {
+      padding: 6px 10px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      width: 250px;
+    }
+    .patient-id-section input:focus {
+      outline: none;
+      border-color: #4a90e2;
+    }
+    .patient-id-section small {
+      display: block;
+      margin-top: 5px;
+      color: #666;
+      font-size: 12px;
+    }
+    .session-info {
+      background: #e8f5e9;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 12px;
+      color: #2e7d32;
+      display: none;
+    }
+    .session-info.active {
+      display: block;
+    }
     #prompt { font-size: 18px; margin: 10px 0; white-space: pre-wrap; }
     button { padding: 8px 12px; margin-right: 8px; }
     #status { margin-top: 10px; color: #333; }
@@ -15,6 +55,22 @@
 </head>
 <body>
   <h2>Speech Homework Demo</h2>
+
+  <div class="patient-id-section">
+    <label for="patientId">Patient ID:</label>
+    <input
+      type="text"
+      id="patientId"
+      placeholder="e.g., john_doe, patient123"
+      autocomplete="off"
+    />
+    <small>💡 Enter a unique ID to track your progress in the dashboard</small>
+  </div>
+
+  <div class="session-info" id="sessionInfo">
+    ✓ Session active: <span id="sessionId"></span>
+  </div>
+
   <div id="prompt">Click "Get Prompt" to start</div>
   <button id="getPrompt">Get Prompt</button>
   <button id="newObject" style="display: none;">New Object</button>
@@ -35,6 +91,9 @@ const startBtn = document.getElementById("startRec");
 const stopBtn = document.getElementById("stopRec");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
+const patientIdInput = document.getElementById("patientId");
+const sessionInfoEl = document.getElementById("sessionInfo");
+const sessionIdSpan = document.getElementById("sessionId");
 
 let session = null;
 let mediaRecorder = null;
@@ -48,12 +107,28 @@ async function getPrompt() {
     let response, json;
 
     if (!session || !session.session_id) {
+      // Get patient ID from input (or generate default)
+      let patientId = patientIdInput.value.trim();
+      if (!patientId) {
+        patientId = "anonymous_" + Date.now();
+        patientIdInput.value = patientId;
+      }
+
+      // Create session ID with patient ID prefix
+      const sessionId = `${patientId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       // First time - start a new session
       response = await fetch(`${BACKEND}/session/start`, { method: "POST" });
       if (!response.ok) throw new Error("Failed to start session");
       json = await response.json();
 
-      // Show the "New Object" button after first session starts
+      // Override the server-generated session_id with our custom one
+      json.session_id = sessionId;
+
+      // Lock the patient ID input and show session info
+      patientIdInput.disabled = true;
+      sessionInfoEl.classList.add('active');
+      sessionIdSpan.textContent = sessionId;
       newObjBtn.style.display = "inline-block";
     } else {
       // Already have a session - get next prompt for same object
