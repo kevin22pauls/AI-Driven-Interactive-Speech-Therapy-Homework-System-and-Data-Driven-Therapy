@@ -466,7 +466,7 @@
     const loadingState = document.getElementById('loadingState');
 
     // Event Listeners
-    loadButton.addEventListener('click', loadPatientData);
+    loadButton.addEventListener('click', () => loadPatientData());
     refreshButton.addEventListener('click', () => loadPatientData(currentPatientId));
     patientInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') loadPatientData();

@@ -29,14 +29,20 @@ def get_prompt():
     return {"object": obj, "prompts": data}
 
 @router.post("/session/start")
-def start_session(object_name: str = None):
+def start_session(object_name: str = Form(None), patient_id: str = Form(None)):
     """
     Start a new session and return a session_id and a prompt to the client.
     If object_name is provided, use that object; otherwise pick randomly.
+    If patient_id is provided, create a session_id with patient_id prefix for tracking.
     """
     from services.prompts import get_expected_answer
 
-    session_id = str(uuid.uuid4())
+    # Create session ID with patient prefix if provided
+    if patient_id:
+        import time
+        session_id = f"{patient_id}_{int(time.time() * 1000)}_{uuid.uuid4().hex[:9]}"
+    else:
+        session_id = str(uuid.uuid4())
 
     # If no object specified, pick randomly
     if not object_name:

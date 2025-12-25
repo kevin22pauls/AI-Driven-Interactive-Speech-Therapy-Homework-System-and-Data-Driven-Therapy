@@ -654,18 +654,48 @@ patient_phoneme_history table:              # ⭐⭐⭐ NEW - Tracks phoneme err
   - created_at
 
 
+CHALLENGES FACED
+================================================================================
+
+1. DATABASE SCHEMA MIGRATION:
+   - Issue: Old database from previous version lacked fluency columns
+   - Impact: Runtime errors when trying to save recordings with new metrics
+   - Solution: Created migration script (migrate_add_fluency_columns.py) and
+     documented two approaches: (1) Delete old database, (2) Run migration
+   - Lesson: SQLite's CREATE TABLE IF NOT EXISTS doesn't alter existing tables
+
+2. SESSION MANAGEMENT SYNCHRONIZATION:
+   - Issue: Client-side was creating custom session IDs with patient prefix
+     and overriding server's UUID-based session IDs
+   - Impact: Server couldn't find sessions in memory, causing 404 errors on
+     /session/next-prompt and /session/change-object endpoints
+   - Root Cause: Client override at recorder.html:126 (json.session_id = sessionId)
+     meant server never stored sessions under the IDs client was requesting
+   - Solution: Modified /session/start endpoint to accept patient_id parameter
+     and generate session ID with patient prefix server-side. Removed client
+     override so both client and server use same session ID.
+   - Lesson: Session management must be centralized on server to maintain state
+
+3. JAVASCRIPT EVENT HANDLER BUG:
+   - Issue: Dashboard load button passed event object instead of patient ID
+   - Impact: API received URL-encoded "[object PointerEvent]" as patient_id
+   - Root Cause: loadButton.addEventListener('click', loadPatientData) passed
+     event object as first parameter to function expecting patient ID
+   - Solution: Changed to arrow function: () => loadPatientData() to call
+     function without parameters (extracts patient ID from input field)
+   - Lesson: Direct function references in event listeners receive event object
+
+
 KNOWN LIMITATIONS & FUTURE WORK
 ================================================================================
 
 CURRENT LIMITATIONS:
 
 1. No user authentication or patient management
-2. Database saves are not yet implemented (TODO in code)
+2. Session storage is in-memory (cleared on server restart)
 3. Gentle forced alignment is optional (works without it)
 4. CMU Dict doesn't include all words (handles gracefully)
 5. No GOP (Goodness of Pronunciation) scores yet
-6. Frontend is single-user (no multi-patient interface)
-7. No longitudinal progress visualization
 
 FUTURE ENHANCEMENTS:
 

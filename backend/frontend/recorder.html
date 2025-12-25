@@ -114,21 +114,21 @@ async function getPrompt() {
         patientIdInput.value = patientId;
       }
 
-      // Create session ID with patient ID prefix
-      const sessionId = `${patientId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // First time - start a new session with patient_id
+      const formData = new FormData();
+      formData.append("patient_id", patientId);
 
-      // First time - start a new session
-      response = await fetch(`${BACKEND}/session/start`, { method: "POST" });
+      response = await fetch(`${BACKEND}/session/start`, {
+        method: "POST",
+        body: formData
+      });
       if (!response.ok) throw new Error("Failed to start session");
       json = await response.json();
-
-      // Override the server-generated session_id with our custom one
-      json.session_id = sessionId;
 
       // Lock the patient ID input and show session info
       patientIdInput.disabled = true;
       sessionInfoEl.classList.add('active');
-      sessionIdSpan.textContent = sessionId;
+      sessionIdSpan.textContent = json.session_id;
       newObjBtn.style.display = "inline-block";
     } else {
       // Already have a session - get next prompt for same object
