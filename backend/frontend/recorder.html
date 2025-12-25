@@ -360,6 +360,99 @@ function displayResults(data) {
     html += `</div>`;
   }
 
+  // Display fluency analysis if present
+  if (data.fluency_analysis && !data.fluency_analysis.error) {
+    const fluency = data.fluency_analysis;
+    html += `<div style="margin-top: 15px; padding: 10px; background-color: #f0f8ff; border-radius: 6px;">`;
+    html += `<h4>Fluency & Stuttering Analysis</h4>`;
+
+    // Key metrics
+    html += `<div><strong>Longest Fluent Run:</strong> ${fluency.longest_fluent_run} words</div>`;
+    html += `<div><strong>Fluency Percentage:</strong> ${fluency.fluency_percentage.toFixed(1)}%</div>`;
+    html += `<div><strong>Dysfluencies per 100 words:</strong> ${fluency.dysfluencies_per_100_words.toFixed(1)}</div>`;
+    html += `<div><strong>Dysfluencies per minute:</strong> ${fluency.dysfluencies_per_minute.toFixed(1)}</div>`;
+
+    // Pause breakdown
+    if (fluency.total_pauses > 0) {
+      html += `<div style="margin-top: 8px;"><strong>Pauses Detected:</strong> ${fluency.total_pauses}`;
+      html += ` (${fluency.hesitation_count} hesitations, ${fluency.block_count} blocks)</div>`;
+    }
+
+    // Stuttering events summary
+    if (fluency.stuttering_events && fluency.stuttering_events.length > 0) {
+      const repetitions = fluency.stuttering_events.filter(e => e.type === 'repetition').length;
+      const interjections = fluency.stuttering_events.filter(e => e.type === 'interjection').length;
+      const prolongations = fluency.stuttering_events.filter(e => e.type === 'prolongation').length;
+
+      html += `<div style="margin-top: 8px;"><strong>Stuttering Events:</strong> ${fluency.stuttering_events.length}`;
+      if (repetitions > 0) html += ` (${repetitions} repetition(s)`;
+      if (interjections > 0) html += `, ${interjections} interjection(s)`;
+      if (prolongations > 0) html += `, ${prolongations} prolongation(s)`;
+      html += `)</div>`;
+    }
+
+    // Clinical notes
+    if (fluency.clinical_notes && fluency.clinical_notes.length > 0) {
+      html += `<div style="margin-top: 10px; padding: 8px; background-color: #fff3cd; border-left: 3px solid #ffc107;">`;
+      html += `<strong>Fluency Insights:</strong>`;
+      html += `<ul style="margin: 5px 0;">`;
+      fluency.clinical_notes.forEach(note => {
+        html += `<li>${note}</li>`;
+      });
+      html += `</ul></div>`;
+    }
+
+    // Detailed stuttering events (collapsible)
+    if (fluency.stuttering_events && fluency.stuttering_events.length > 0) {
+      html += `<details style="margin-top: 10px;">`;
+      html += `<summary style="cursor: pointer; font-weight: bold;">Detailed Stuttering Events (${fluency.stuttering_events.length})</summary>`;
+      html += `<table style="width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12px;">`;
+      html += `<tr style="background-color: #f0f0f0;"><th>Type</th><th>Position</th><th>Word</th><th>Details</th></tr>`;
+      fluency.stuttering_events.forEach(event => {
+        const typeColor = {
+          'repetition': '#ff9800',
+          'interjection': '#9c27b0',
+          'prolongation': '#f44336'
+        }[event.type] || '#333';
+
+        let details = '';
+        if (event.type === 'repetition') {
+          details = `Repeated ${event.repetition_count}x`;
+        } else if (event.type === 'prolongation' && event.duration) {
+          details = `Duration: ${event.duration.toFixed(2)}s`;
+        }
+
+        html += `<tr style="border-bottom: 1px solid #ddd;">`;
+        html += `<td style="padding: 4px; color: ${typeColor}; font-weight: bold;">${event.type}</td>`;
+        html += `<td style="padding: 4px;">${event.position}</td>`;
+        html += `<td style="padding: 4px;">${event.word}</td>`;
+        html += `<td style="padding: 4px;">${details}</td>`;
+        html += `</tr>`;
+      });
+      html += `</table></details>`;
+    }
+
+    // Detailed pauses (collapsible)
+    if (fluency.pauses && fluency.pauses.length > 0) {
+      html += `<details style="margin-top: 10px;">`;
+      html += `<summary style="cursor: pointer; font-weight: bold;">Detailed Pauses (${fluency.pauses.length})</summary>`;
+      html += `<table style="width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12px;">`;
+      html += `<tr style="background-color: #f0f0f0;"><th>Type</th><th>Duration</th><th>Location</th><th>Context</th></tr>`;
+      fluency.pauses.forEach(pause => {
+        const pauseColor = pause.type === 'block' ? '#f44336' : '#ff9800';
+        html += `<tr style="border-bottom: 1px solid #ddd;">`;
+        html += `<td style="padding: 4px; color: ${pauseColor}; font-weight: bold;">${pause.type}</td>`;
+        html += `<td style="padding: 4px;">${pause.duration.toFixed(2)}s</td>`;
+        html += `<td style="padding: 4px;">${pause.location}</td>`;
+        html += `<td style="padding: 4px;">${pause.before_word || '?'} → ${pause.after_word || '?'}</td>`;
+        html += `</tr>`;
+      });
+      html += `</table></details>`;
+    }
+
+    html += `</div>`;
+  }
+
   // Display other metrics
   html += `<div style="margin-top: 15px;">`;
   html += `<h4>Speech Metrics</h4>`;

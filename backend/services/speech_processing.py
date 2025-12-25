@@ -5,6 +5,7 @@ from services.metrics import compute_wer, compute_speech_rate, compute_pause_rat
 from services.semantic_analysis import evaluate_answer
 from services.prompts import get_question_type
 from services.phoneme_analysis import analyze_phonemes, format_phoneme_result_for_api
+from services.fluency_analysis import analyze_fluency, format_fluency_result_for_api
 import logging
 
 logger = logging.getLogger(__name__)
@@ -104,5 +105,26 @@ def analyze_speech(audio_path: str, prompt_data: Optional[Dict] = None):
                 "error": "Phoneme analysis unavailable",
                 "reason": str(e)
             }
+
+    # Add fluency analysis (always run - doesn't need expected answer)
+    try:
+        logger.info("Performing fluency analysis")
+        fluency_result = analyze_fluency(segments_list)
+
+        # Format for API response
+        result["fluency_analysis"] = format_fluency_result_for_api(fluency_result)
+
+        logger.info(f"Fluency analysis - LFR: {fluency_result.longest_fluent_run}, "
+                   f"Fluency: {fluency_result.fluency_percentage:.1f}%, "
+                   f"Pauses: {fluency_result.total_pauses}, "
+                   f"Stuttering events: {len(fluency_result.stuttering_events)}")
+
+    except Exception as e:
+        logger.error(f"Fluency analysis failed: {e}", exc_info=True)
+        # Don't fail the whole analysis if fluency analysis fails
+        result["fluency_analysis"] = {
+            "error": "Fluency analysis unavailable",
+            "reason": str(e)
+        }
 
     return result

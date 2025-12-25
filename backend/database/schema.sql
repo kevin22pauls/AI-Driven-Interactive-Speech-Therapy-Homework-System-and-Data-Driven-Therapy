@@ -16,6 +16,18 @@ CREATE TABLE IF NOT EXISTS recordings (
     clinical_notes_json TEXT,  -- JSON array of clinical notes
     semantic_classification TEXT,  -- 'correct', 'partial', 'wrong'
     semantic_score REAL,
+    -- Fluency metrics
+    longest_fluent_run INTEGER,
+    total_pauses INTEGER,
+    hesitation_count INTEGER,
+    block_count INTEGER,
+    fluency_percentage REAL,
+    dysfluencies_per_100_words REAL,
+    dysfluencies_per_minute REAL,
+    speech_rate_variability REAL,
+    stuttering_events_json TEXT,  -- JSON array of stuttering events
+    pauses_json TEXT,  -- JSON array of pauses
+    fluency_notes_json TEXT,  -- JSON array of fluency clinical notes
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

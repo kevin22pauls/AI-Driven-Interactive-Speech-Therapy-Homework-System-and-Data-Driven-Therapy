@@ -101,7 +101,25 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    ✓ Semantic substitution tracking
    ✓ Clinical marker identification
 
-5. PROMPT SYSTEM
+5. FLUENCY & STUTTERING ANALYSIS ⭐ NEW
+   ✓ Longest Fluent Run (LFR) calculation - key progress metric
+   ✓ Pause detection and classification:
+      - Hesitations (300ms - 1s pauses)
+      - Blocks (>1s pauses)
+      - Pause location tracking (beginning, middle, end)
+   ✓ Stuttering event detection:
+      - Word repetitions (e.g., "I I I want")
+      - Prolongations (stretched sounds based on duration)
+      - Interjections (um, uh, like, etc.)
+   ✓ Fluency metrics:
+      - Dysfluencies per 100 words
+      - Dysfluencies per minute
+      - Fluency percentage
+      - Speech rate variability (consistency of pace)
+   ✓ Clinical insights for fluency therapy
+   ✓ Automated clinical recommendations
+
+6. PROMPT SYSTEM
    ✓ Object-based prompt generation
    ✓ 5 objects with multiple prompts each:
       - bottle, cup, phone, book, chair
@@ -111,7 +129,7 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    ✓ Multi-prompt sessions without changing objects
    ✓ Dynamic object switching
 
-6. USER INTERFACE
+7. USER INTERFACE
    ✓ Browser-based audio recording
    ✓ Automatic silence detection (VAD)
    ✓ Real-time status updates
@@ -119,12 +137,16 @@ SUCCESSFULLY IMPLEMENTED FEATURES
       - Transcript
       - Semantic evaluation with color coding
       - Phoneme error table with highlighting
+      - Fluency analysis with LFR and stuttering events ⭐ NEW
       - Speech metrics
       - Clinical insights
-   ✓ Collapsible detailed views
+   ✓ Collapsible detailed views for:
+      - Phoneme errors
+      - Stuttering events ⭐ NEW
+      - Pause details ⭐ NEW
    ✓ Session management buttons
 
-7. DATABASE & STORAGE
+8. DATABASE & STORAGE
    ✓ SQLite database with comprehensive schema
    ✓ Recordings table with all metrics
    ✓ Patient phoneme history tracking
@@ -132,14 +154,20 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    ✓ Indexed for performance
    ✓ Audio file management with timestamped names
 
-8. TESTING & QUALITY ASSURANCE
+9. TESTING & QUALITY ASSURANCE
    ✓ Unit tests for phoneme analysis
    ✓ Test coverage for PER calculation
    ✓ Alignment algorithm testing
    ✓ Clinical note generation tests
    ✓ CMU dictionary lookup tests
+   ✓ Fluency analysis tests ⭐ NEW:
+      - Pause detection testing
+      - Repetition detection testing
+      - LFR calculation testing
+      - Interjection detection testing
+      - Speech rate variability testing
 
-9. DEPLOYMENT & INFRASTRUCTURE
+10. DEPLOYMENT & INFRASTRUCTURE
    ✓ Docker Compose configuration for Gentle
    ✓ Modular service architecture
    ✓ Environment variable configuration
@@ -212,6 +240,7 @@ FINAL PROJECT/
 │   │   ├── phoneme_analysis.py      # ⭐ Phoneme-level analysis
 │   │   ├── phoneme_lookup.py        # ⭐ CMU Dict wrapper
 │   │   ├── forced_alignment.py      # ⭐ Gentle integration
+│   │   ├── fluency_analysis.py      # ⭐⭐ Fluency & stuttering detection
 │   │   ├── prompts.py               # Prompt management
 │   │   ├── metrics.py               # WER, rate, pause calculations
 │   │   └── audio.py                 # Audio preprocessing
@@ -239,7 +268,8 @@ FINAL PROJECT/
 │   │
 │   └── tests/                       # ⭐ NEW
 │       ├── __init__.py
-│       └── test_phoneme_analysis.py # Unit tests
+│       ├── test_phoneme_analysis.py # Phoneme unit tests
+│       └── test_fluency_analysis.py # ⭐⭐ Fluency unit tests
 │
 ├── docker-compose.yml               # ⭐ Gentle service configuration
 ├── .gitignore                       # Git ignore rules
@@ -295,6 +325,72 @@ KEY ALGORITHMS
 
    Calculated from inter-segment gaps
 
+6. LONGEST FLUENT RUN (LFR): ⭐⭐ NEW
+
+   LFR = Maximum consecutive words spoken without dysfluencies
+
+   Dysfluencies include:
+   - Pauses > 300ms (hesitations)
+   - Pauses > 1000ms (blocks)
+   - Word repetitions
+   - Interjections (filler words)
+   - Prolongations
+
+   Algorithm:
+   1. Mark all dysfluent positions in word sequence
+   2. Find longest continuous run of non-dysfluent words
+   3. Return count of words in longest run
+
+   Example:
+   "I... I want um to drink water" → LFR = 3 ("to drink water")
+
+7. PAUSE DETECTION: ⭐⭐ NEW
+
+   Pause Duration = word[i+1].start - word[i].end
+
+   Classification:
+   - < 300ms: Normal (not counted)
+   - 300ms - 1000ms: Hesitation
+   - > 1000ms: Block/significant pause
+
+   Location tracking:
+   - Beginning: Pause after first word
+   - Middle: Pause in middle of utterance
+   - End: Pause before last word
+
+8. STUTTERING EVENT DETECTION: ⭐⭐ NEW
+
+   Repetitions:
+   - Detect consecutive identical words
+   - Count repetition frequency
+   - Example: "I I I" → 3 repetitions
+
+   Interjections:
+   - Match against filler word list (um, uh, like, etc.)
+   - Flag as dysfluency markers
+
+   Prolongations:
+   - Calculate expected word duration: avg_char_duration * word_length
+   - Detect outliers > 2 standard deviations above mean
+   - Flag words with duration > 500ms as potentially prolonged
+
+9. FLUENCY PERCENTAGE: ⭐⭐ NEW
+
+   Fluency % = 100 - (Dysfluencies / Total Words * 100)
+
+   Where dysfluencies = pauses + stuttering events
+
+10. SPEECH RATE VARIABILITY: ⭐⭐ NEW
+
+    Measures consistency of speaking pace (coefficient of variation)
+
+    Algorithm:
+    1. Calculate speech rate for 3-word sliding windows
+    2. Compute mean and standard deviation of rates
+    3. CV = std_dev / mean
+
+    Higher CV indicates more variable/inconsistent pace (common in dysfluency)
+
 
 CLINICAL INSIGHTS GENERATION
 ================================================================================
@@ -325,6 +421,10 @@ This system enables research on:
 4. Correlation between semantic and phonetic errors
 5. Automated homework compliance monitoring
 6. Large-scale speech therapy outcome studies
+7. Fluency disorder progression tracking ⭐⭐ NEW
+8. Stuttering pattern analysis and treatment efficacy ⭐⭐ NEW
+9. Longest Fluent Run (LFR) as progress indicator ⭐⭐ NEW
+10. Objective dysfluency frequency measurement ⭐⭐ NEW
 
 
 USAGE INSTRUCTIONS
