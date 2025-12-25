@@ -119,7 +119,25 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    ✓ Clinical insights for fluency therapy
    ✓ Automated clinical recommendations
 
-6. PROMPT SYSTEM
+6. DATA PERSISTENCE & SESSION MANAGEMENT ⭐⭐⭐ NEW
+   ✓ Automatic database saving of all analysis results
+   ✓ Session tracking (grouping multiple prompts together)
+   ✓ Patient identification and longitudinal tracking
+   ✓ Comprehensive query functions:
+      - Patient recording history with filtering
+      - Progress tracking over time (trends)
+      - Phoneme trend analysis (specific phoneme improvement)
+      - Session summaries with aggregate metrics
+   ✓ Patient phoneme history tracking table
+   ✓ Aggregated progress metrics:
+      - Average fluency, PER, WER, LFR
+      - LFR trend over time (daily averages)
+      - Most problematic phonemes ranked
+      - Performance by object
+   ✓ API endpoints for therapist insights
+   ✓ Graceful error handling (saves don't block analysis)
+
+7. PROMPT SYSTEM
    ✓ Object-based prompt generation
    ✓ 5 objects with multiple prompts each:
       - bottle, cup, phone, book, chair
@@ -129,7 +147,7 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    ✓ Multi-prompt sessions without changing objects
    ✓ Dynamic object switching
 
-7. USER INTERFACE
+8. USER INTERFACE
    ✓ Browser-based audio recording
    ✓ Automatic silence detection (VAD)
    ✓ Real-time status updates
@@ -251,7 +269,8 @@ FINAL PROJECT/
 │   ├── database/
 │   │   ├── db.py                    # SQLAlchemy engine
 │   │   ├── schema.py                # Table initialization
-│   │   └── schema.sql               # ⭐ Updated SQL schema
+│   │   ├── schema.sql               # ⭐ Updated SQL schema with fluency fields
+│   │   └── persistence.py           # ⭐⭐⭐ NEW: Save & query functions
 │   │
 │   ├── data/
 │   │   ├── objects.py               # Object definitions
@@ -269,7 +288,8 @@ FINAL PROJECT/
 │   └── tests/                       # ⭐ NEW
 │       ├── __init__.py
 │       ├── test_phoneme_analysis.py # Phoneme unit tests
-│       └── test_fluency_analysis.py # ⭐⭐ Fluency unit tests
+│       ├── test_fluency_analysis.py # ⭐⭐ Fluency unit tests
+│       └── test_persistence.py      # ⭐⭐⭐ Database persistence tests
 │
 ├── docker-compose.yml               # ⭐ Gentle service configuration
 ├── .gitignore                       # Git ignore rules
@@ -416,15 +436,18 @@ RESEARCH APPLICATIONS
 This system enables research on:
 
 1. Phoneme-level error patterns in aphasia
-2. Longitudinal tracking of pronunciation improvement
-3. Identification of problematic phonemes per patient
+2. Longitudinal tracking of pronunciation improvement ⭐⭐⭐ ENABLED
+3. Identification of problematic phonemes per patient ⭐⭐⭐ ENABLED
 4. Correlation between semantic and phonetic errors
-5. Automated homework compliance monitoring
-6. Large-scale speech therapy outcome studies
-7. Fluency disorder progression tracking ⭐⭐ NEW
-8. Stuttering pattern analysis and treatment efficacy ⭐⭐ NEW
-9. Longest Fluent Run (LFR) as progress indicator ⭐⭐ NEW
-10. Objective dysfluency frequency measurement ⭐⭐ NEW
+5. Automated homework compliance monitoring ⭐⭐⭐ ENABLED (session tracking)
+6. Large-scale speech therapy outcome studies ⭐⭐⭐ ENABLED (database persistence)
+7. Fluency disorder progression tracking ⭐⭐⭐ ENABLED
+8. Stuttering pattern analysis and treatment efficacy ⭐⭐⭐ ENABLED
+9. Longest Fluent Run (LFR) as progress indicator ⭐⭐⭐ ENABLED
+10. Objective dysfluency frequency measurement ⭐⭐⭐ ENABLED
+11. Patient-specific phoneme trend analysis ⭐⭐⭐ NEW
+12. Multi-session progress comparison ⭐⭐⭐ NEW
+13. Object-specific performance tracking ⭐⭐⭐ NEW
 
 
 USAGE INSTRUCTIONS
@@ -488,13 +511,46 @@ POST /record
       * transcript
       * wer, speech_rate, pause_ratio
       * semantic_evaluation
-      * phoneme_analysis (NEW)
-          - per
-          - error_count
-          - error_summary
-          - problematic_phonemes
+      * phoneme_analysis
+          - per, total_phonemes
           - errors (detailed list)
+          - problematic_phonemes
           - clinical_notes
+      * fluency_analysis
+          - longest_fluent_run
+          - fluency_percentage
+          - stuttering_events
+          - pauses
+          - clinical_notes
+      * recording_id (database ID) ⭐⭐⭐ NEW
+
+GET /patient/{patient_id}/history  ⭐⭐⭐ NEW
+  - Get recording history for a patient
+  - Params: patient_id, limit (optional), object_name (optional filter)
+  - Returns: List of all recordings with full analysis results
+
+GET /patient/{patient_id}/progress  ⭐⭐⭐ NEW
+  - Get aggregated progress metrics for a patient
+  - Returns:
+      * total_recordings
+      * avg_fluency, avg_per, avg_wer, avg_lfr
+      * lfr_trend (daily averages over time)
+      * most_problematic_phonemes (ranked by error rate)
+      * object_performance (performance by object)
+
+GET /patient/{patient_id}/phoneme/{phoneme}/trend  ⭐⭐⭐ NEW
+  - Track specific phoneme errors over time
+  - Params: patient_id, phoneme (e.g., 'AA', 'TH')
+  - Returns: List of recordings where phoneme had errors, with dates
+
+GET /session/{session_id}/summary  ⭐⭐⭐ NEW
+  - Get summary of all recordings in a session
+  - Returns:
+      * session_id
+      * total_prompts
+      * object_name
+      * recordings (all recordings in session)
+      * session_averages (avg fluency, PER, LFR)
 
 
 DATABASE SCHEMA
@@ -502,26 +558,47 @@ DATABASE SCHEMA
 
 recordings table:
   - id (PRIMARY KEY)
-  - session_id
+  - session_id                              # Groups prompts together
   - object_name
   - prompt_text
   - expected_answer
   - audio_path
   - transcript
-  - wer, speech_rate, pause_ratio
-  - per, total_phonemes                    # ⭐ NEW
-  - phoneme_errors_json                    # ⭐ NEW
-  - problematic_phonemes_json              # ⭐ NEW
-  - clinical_notes_json                    # ⭐ NEW
-  - semantic_classification, semantic_score
-  - created_at
 
-patient_phoneme_history table:              # ⭐ NEW
+  # Word-level metrics
+  - wer, speech_rate, pause_ratio
+
+  # Phoneme-level metrics
+  - per, total_phonemes
+  - phoneme_errors_json                     # JSON array of detailed errors
+  - problematic_phonemes_json               # JSON object: {phoneme: count}
+  - clinical_notes_json                     # JSON array of insights
+
+  # Semantic metrics
+  - semantic_classification                 # correct/partial/wrong
+  - semantic_score                          # 0.0 - 1.0
+
+  # Fluency metrics ⭐⭐⭐ NEW
+  - longest_fluent_run                      # Max consecutive fluent words
+  - total_pauses                            # Total pause count
+  - hesitation_count                        # 300ms-1s pauses
+  - block_count                             # >1s pauses
+  - fluency_percentage                      # 0-100%
+  - dysfluencies_per_100_words
+  - dysfluencies_per_minute
+  - speech_rate_variability                 # Coefficient of variation
+  - stuttering_events_json                  # JSON array of stuttering events
+  - pauses_json                             # JSON array of pause details
+  - fluency_notes_json                      # JSON array of clinical notes
+
+  - created_at (TIMESTAMP)
+
+patient_phoneme_history table:              # ⭐⭐⭐ NEW - Tracks phoneme errors over time
   - id (PRIMARY KEY)
   - patient_id
-  - phoneme
-  - error_count
-  - occurrence_count
+  - phoneme                                 # e.g., 'AA', 'TH', 'R'
+  - error_count                             # Total errors for this phoneme
+  - occurrence_count                        # Total times phoneme appeared
   - last_error_date
   - created_at
 
@@ -561,13 +638,20 @@ UNIT TESTS:
 ✓ PER calculation
 ✓ Phoneme alignment algorithm
 ✓ Error type classification
-✓ Clinical note generation
+✓ Word extraction from segments
+✓ Pause detection (hesitation, block)
+✓ Stuttering detection (repetitions, interjections)
+✓ LFR calculation with dysfluencies
+✓ Database persistence (save_recording) ⭐⭐⭐ NEW
+✓ Patient history queries ⭐⭐⭐ NEW
+✓ Progress tracking aggregations ⭐⭐⭐ NEW
+✓ Session summaries ⭐⭐⭐ NEW
+✓ Phoneme trend tracking ⭐⭐⭐ NEW
 
 INTEGRATION TESTING:
 (To be implemented)
 - End-to-end workflow testing
-- API endpoint testing
-- Database persistence testing
+- API endpoint testing with real audio
 
 CLINICAL VALIDATION:
 (Future work for publication)
@@ -628,9 +712,10 @@ For questions, bug reports, or collaboration inquiries:
 - GitHub Issues: [repository URL]
 - Email: [your email]
 
-Last Updated: December 22, 2025
-Version: 1.0.0
-Status: Research MVP with Phoneme Analysis
+Last Updated: December 25, 2025
+Version: 2.0.0
+Status: Research MVP with Full Longitudinal Tracking
+Features: Phoneme Analysis + Fluency Analysis + Database Persistence
 
 
 ================================================================================

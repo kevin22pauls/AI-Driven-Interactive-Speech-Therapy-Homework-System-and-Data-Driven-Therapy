@@ -3,10 +3,20 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from utils.file_utils import save_audio_file
 from services.prompts import get_random_prompt, OBJECT_PROMPTS
 from services.speech_processing import analyze_speech
+from database.persistence import (
+    save_recording,
+    get_patient_history,
+    get_patient_progress,
+    get_session_summary,
+    get_phoneme_trends
+)
 import uuid
 import os
 import random
-from typing import Dict
+import logging
+from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -168,5 +178,141 @@ async def receive_recording(
     result["object"] = object_name
     result["prompt"] = prompt_text
 
-    # Optionally: save to DB here (not implemented in skeleton)
+    # Save to database
+    try:
+        # Extract patient_id from session_id if it follows pattern: patient123_session456
+        # For now, we'll use None and save session_id as-is
+        # In production, implement proper patient ID extraction
+        patient_id = None  # TODO: Extract from session or add patient_id parameter
+
+        recording_id = save_recording(
+            session_id=session_id,
+            object_name=object_name,
+            prompt_text=prompt_text,
+            expected_answer=expected_answer,
+            audio_path=audio_path,
+            analysis_result=result,
+            patient_id=patient_id
+        )
+
+        result["recording_id"] = recording_id
+        logger.info(f"Saved recording {recording_id} to database")
+
+    except Exception as e:
+        # Don't fail the request if database save fails
+        logger.error(f"Failed to save recording to database: {e}", exc_info=True)
+        result["database_save_error"] = str(e)
+
     return result
+
+
+# ============================================================================
+# Patient Data & Progress Endpoints
+# ============================================================================
+
+@router.get("/patient/{patient_id}/history")
+def patient_history(
+    patient_id: str,
+    limit: int = 50,
+    object_name: Optional[str] = None
+):
+    """
+    Get recording history for a patient.
+
+    Args:
+        patient_id: Patient identifier
+        limit: Maximum number of recordings to return (default: 50)
+        object_name: Optional filter by object name
+
+    Returns:
+        List of recordings with all analysis results
+    """
+    try:
+        recordings = get_patient_history(patient_id, limit, object_name)
+        return {
+            "patient_id": patient_id,
+            "total_recordings": len(recordings),
+            "recordings": recordings
+        }
+    except Exception as e:
+        logger.error(f"Failed to get patient history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/patient/{patient_id}/progress")
+def patient_progress(patient_id: str):
+    """
+    Get aggregated progress metrics for a patient.
+
+    Returns longitudinal data including:
+    - Average fluency, PER, WER, LFR
+    - LFR trend over time
+    - Most problematic phonemes
+    - Performance by object
+
+    Args:
+        patient_id: Patient identifier
+
+    Returns:
+        Progress summary with trends and insights
+    """
+    try:
+        progress = get_patient_progress(patient_id)
+        return progress
+    except Exception as e:
+        logger.error(f"Failed to get patient progress: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/patient/{patient_id}/phoneme/{phoneme}/trend")
+def phoneme_trend(patient_id: str, phoneme: str):
+    """
+    Get trend data for a specific phoneme across all recordings.
+
+    Useful for tracking if a patient is improving on a problematic sound.
+
+    Args:
+        patient_id: Patient identifier
+        phoneme: Phoneme to track (e.g., 'AA', 'TH', 'R')
+
+    Returns:
+        List of recordings where this phoneme had errors, with dates
+    """
+    try:
+        trend = get_phoneme_trends(patient_id, phoneme)
+        return {
+            "patient_id": patient_id,
+            "phoneme": phoneme,
+            "total_occurrences": len(trend),
+            "trend_data": trend
+        }
+    except Exception as e:
+        logger.error(f"Failed to get phoneme trend: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/session/{session_id}/summary")
+def session_summary(session_id: str):
+    """
+    Get summary of all recordings in a session.
+
+    Shows all prompts completed in a session with aggregate metrics.
+
+    Args:
+        session_id: Session identifier
+
+    Returns:
+        Session summary with all recordings and averages
+    """
+    try:
+        summary = get_session_summary(session_id)
+
+        if summary["total_prompts"] == 0:
+            raise HTTPException(status_code=404, detail="Session not found or has no recordings")
+
+        return summary
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get session summary: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
