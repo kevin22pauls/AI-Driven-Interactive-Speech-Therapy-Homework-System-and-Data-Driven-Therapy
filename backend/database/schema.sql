@@ -43,8 +43,20 @@ CREATE TABLE IF NOT EXISTS patient_phoneme_history (
     UNIQUE(patient_id, phoneme)
 );
 
+-- Table for caching LLM-generated prompts
+CREATE TABLE IF NOT EXISTS generated_prompts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    object_name TEXT UNIQUE NOT NULL,
+    prompts_json TEXT NOT NULL,  -- JSON with questions and sentences
+    model_name TEXT,  -- e.g., "llama3.2:3b"
+    generation_method TEXT,  -- "llm" or "fallback"
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_recordings_session ON recordings(session_id);
 CREATE INDEX IF NOT EXISTS idx_recordings_object ON recordings(object_name);
 CREATE INDEX IF NOT EXISTS idx_recordings_created ON recordings(created_at);
 CREATE INDEX IF NOT EXISTS idx_patient_phoneme ON patient_phoneme_history(patient_id, phoneme);
+CREATE INDEX IF NOT EXISTS idx_generated_prompts_object ON generated_prompts(object_name);

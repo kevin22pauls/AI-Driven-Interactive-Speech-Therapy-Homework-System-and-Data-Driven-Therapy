@@ -3,12 +3,20 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from utils.file_utils import save_audio_file
 from services.prompts import get_random_prompt, OBJECT_PROMPTS
 from services.speech_processing import analyze_speech
+from services.llm_prompt_generator import (
+    generate_prompts_with_ollama,
+    generate_fallback_prompts,
+    check_ollama_status
+)
 from database.persistence import (
     save_recording,
     get_patient_history,
     get_patient_progress,
     get_session_summary,
-    get_phoneme_trends
+    get_phoneme_trends,
+    save_generated_prompts,
+    get_cached_prompts,
+    list_generated_objects
 )
 import uuid
 import os
@@ -322,3 +330,128 @@ def session_summary(session_id: str):
     except Exception as e:
         logger.error(f"Failed to get session summary: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/generate-prompts")
+def generate_prompts_for_object(object_name: str = Form(...), force_regenerate: bool = Form(False)):
+    """
+    Generate speech therapy prompts for any object using LLM or fallback.
+
+    This endpoint:
+    1. Checks cache first (unless force_regenerate=True)
+    2. If not cached, tries to generate with Ollama
+    3. Falls back to template-based prompts if Ollama fails
+    4. Caches the result for future use
+
+    Args:
+        object_name: The object to generate prompts for (e.g., "toothbrush", "umbrella")
+        force_regenerate: If True, regenerate even if cached (default: False)
+
+    Returns:
+        {
+            "object": str,
+            "questions": [{"text": str, "type": str, "expected_answers": [str]}],
+            "sentences": [{"text": str, "difficulty": str}],
+            "source": "cache" | "llm" | "fallback",
+            "model": str (if LLM was used)
+        }
+    """
+    object_name = object_name.strip().lower()
+
+    if not object_name:
+        raise HTTPException(status_code=400, detail="Object name cannot be empty")
+
+    # Check cache first
+    if not force_regenerate:
+        cached = get_cached_prompts(object_name)
+        if cached:
+            logger.info(f"Using cached prompts for '{object_name}'")
+            return {
+                "object": object_name,
+                "questions": cached["questions"],
+                "sentences": cached["sentences"],
+                "source": "cache"
+            }
+
+    # Try to generate with LLM
+    ollama_available = check_ollama_status()
+
+    if ollama_available:
+        logger.info(f"Generating prompts for '{object_name}' using Ollama")
+        prompts_data = generate_prompts_with_ollama(object_name)
+
+        if prompts_data:
+            # Save to cache
+            save_generated_prompts(
+                object_name,
+                prompts_data,
+                model_name="llama3.2:3b",
+                generation_method="llm"
+            )
+
+            return {
+                "object": object_name,
+                "questions": prompts_data["questions"],
+                "sentences": prompts_data["sentences"],
+                "source": "llm",
+                "model": "llama3.2:3b"
+            }
+        else:
+            logger.warning(f"LLM generation failed for '{object_name}', using fallback")
+    else:
+        logger.warning("Ollama not available, using fallback prompts")
+
+    # Fallback to template-based generation
+    fallback_prompts = generate_fallback_prompts(object_name)
+
+    # Save fallback to cache
+    save_generated_prompts(
+        object_name,
+        fallback_prompts,
+        model_name=None,
+        generation_method="fallback"
+    )
+
+    return {
+        "object": object_name,
+        "questions": fallback_prompts["questions"],
+        "sentences": fallback_prompts["sentences"],
+        "source": "fallback"
+    }
+
+
+@router.get("/generated-objects")
+def get_generated_objects_list():
+    """
+    Get list of all objects with generated prompts.
+
+    Returns:
+        {
+            "objects": [str],
+            "count": int
+        }
+    """
+    objects = list_generated_objects()
+    return {
+        "objects": objects,
+        "count": len(objects)
+    }
+
+
+@router.get("/ollama/status")
+def get_ollama_status():
+    """
+    Check if Ollama is running and accessible.
+
+    Returns:
+        {
+            "available": bool,
+            "message": str
+        }
+    """
+    available = check_ollama_status()
+
+    return {
+        "available": available,
+        "message": "Ollama is running" if available else "Ollama not available (will use fallback prompts)"
+    }

@@ -27,7 +27,13 @@ def analyze_speech(audio_path: str, prompt_data: Optional[Dict] = None):
     model = get_whisper_model()
 
     try:
-        segments, info = model.transcribe(audio_path, beam_size=5)
+        segments, info = model.transcribe(
+            audio_path,
+            beam_size=5,
+            language="en",  # Force English-only transcription
+            vad_filter=True,  # Enable voice activity detection
+            vad_parameters=dict(min_silence_duration_ms=500)  # Filter out silence
+        )
     except Exception as e:
         logger.error(f"Transcription failed: {e}")
         raise

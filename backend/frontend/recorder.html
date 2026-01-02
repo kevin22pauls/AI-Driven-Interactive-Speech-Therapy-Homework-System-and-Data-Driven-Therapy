@@ -67,12 +67,29 @@
     <small>💡 Enter a unique ID to track your progress in the dashboard</small>
   </div>
 
+  <div class="patient-id-section" style="border-left-color: #9c27b0;">
+    <label for="objectName">Object:</label>
+    <input
+      type="text"
+      id="objectName"
+      placeholder="e.g., toothbrush, umbrella, spoon"
+      autocomplete="off"
+    />
+    <small>✨ Enter ANY object - the system will generate prompts automatically</small>
+    <div style="margin-top: 8px;">
+      <button id="generatePrompts" style="padding: 6px 12px; font-size: 13px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Generate Prompts
+      </button>
+      <span id="ollamaStatus" style="margin-left: 10px; font-size: 12px;"></span>
+    </div>
+  </div>
+
   <div class="session-info" id="sessionInfo">
     ✓ Session active: <span id="sessionId"></span>
   </div>
 
-  <div id="prompt">Click "Get Prompt" to start</div>
-  <button id="getPrompt">Get Prompt</button>
+  <div id="prompt">Enter an object and click "Generate Prompts" to start</div>
+  <button id="getPrompt" disabled>Get Prompt</button>
   <button id="newObject" style="display: none;">New Object</button>
   <button id="startRec" disabled>Start Recording</button>
   <button id="stopRec" disabled>Stop</button>
@@ -94,18 +111,26 @@ const resultEl = document.getElementById("result");
 const patientIdInput = document.getElementById("patientId");
 const sessionInfoEl = document.getElementById("sessionInfo");
 const sessionIdSpan = document.getElementById("sessionId");
+const objectNameInput = document.getElementById("objectName");
+const generatePromptsBtn = document.getElementById("generatePrompts");
+const ollamaStatusEl = document.getElementById("ollamaStatus");
 
 let session = null;
+let generatedPrompts = null; // Store generated prompts for the current object
 let mediaRecorder = null;
 let audioChunks = [];
 let silenceTimeout = null;
 let audioContext, analyser, sourceNode;
 
 async function getPrompt() {
-  statusEl.innerText = "Requesting prompt...";
-  try {
-    let response, json;
+  if (!generatedPrompts) {
+    statusEl.innerText = "⚠️ Please generate prompts for an object first!";
+    return;
+  }
 
+  statusEl.innerText = "Selecting prompt...";
+  try {
+    // Create session if first time
     if (!session || !session.session_id) {
       // Get patient ID from input (or generate default)
       let patientId = patientIdInput.value.trim();
@@ -114,89 +139,178 @@ async function getPrompt() {
         patientIdInput.value = patientId;
       }
 
-      // First time - start a new session with patient_id
-      const formData = new FormData();
-      formData.append("patient_id", patientId);
+      // Create session ID with patient prefix
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substr(2, 9);
+      const sessionId = `${patientId}_${timestamp}_${randomStr}`;
 
-      response = await fetch(`${BACKEND}/session/start`, {
-        method: "POST",
-        body: formData
-      });
-      if (!response.ok) throw new Error("Failed to start session");
-      json = await response.json();
+      // Initialize session with object and empty used prompts
+      session = {
+        session_id: sessionId,
+        object: generatedPrompts.object,
+        used_prompts: []
+      };
 
       // Lock the patient ID input and show session info
       patientIdInput.disabled = true;
       sessionInfoEl.classList.add('active');
-      sessionIdSpan.textContent = json.session_id;
+      sessionIdSpan.textContent = sessionId;
       newObjBtn.style.display = "inline-block";
-    } else {
-      // Already have a session - get next prompt for same object
-      const formData = new FormData();
-      formData.append("session_id", session.session_id);
-
-      response = await fetch(`${BACKEND}/session/next-prompt`, {
-        method: "POST",
-        body: formData
-      });
-      if (!response.ok) throw new Error("Failed to get next prompt");
-      json = await response.json();
     }
 
-    // Update session data
-    session = {
-      session_id: json.session_id,
-      prompt_text: json.prompt_text,
-      object: json.object,
-      expected_answer: json.expected_answer
-    };
+    // Get all available prompts (questions + sentences)
+    const allPrompts = [];
 
-    promptEl.innerText = `Object: ${session.object}\nPrompt: ${session.prompt_text}`;
+    // Add questions
+    generatedPrompts.questions.forEach(q => {
+      allPrompts.push({
+        text: q.text,
+        type: "question",
+        expected_answers: q.expected_answers
+      });
+    });
+
+    // Add sentences
+    generatedPrompts.sentences.forEach(s => {
+      allPrompts.push({
+        text: s.text,
+        type: "sentence",
+        expected_answers: [s.text] // For sentences, expected answer is the sentence itself
+      });
+    });
+
+    // Filter out already used prompts
+    const availablePrompts = allPrompts.filter(p => !session.used_prompts.includes(p.text));
+
+    // If all prompts used, reset
+    if (availablePrompts.length === 0) {
+      session.used_prompts = [];
+      statusEl.innerText = "🔄 All prompts completed! Starting over...";
+    }
+
+    // Pick a random available prompt
+    const promptsToChooseFrom = availablePrompts.length > 0 ? availablePrompts : allPrompts;
+    const selectedPrompt = promptsToChooseFrom[Math.floor(Math.random() * promptsToChooseFrom.length)];
+
+    // Mark as used
+    session.used_prompts.push(selectedPrompt.text);
+
+    // Update session with current prompt
+    session.prompt_text = selectedPrompt.text;
+    session.prompt_type = selectedPrompt.type;
+    session.expected_answer = selectedPrompt.expected_answers[0]; // Use first expected answer for semantic evaluation
+
+    promptEl.innerText = `Object: ${session.object}\n${selectedPrompt.type === "question" ? "Question" : "Sentence"}: ${session.prompt_text}`;
     startBtn.disabled = false;
-    statusEl.innerText = "Prompt ready. Click 'Start Recording' to answer.";
+    statusEl.innerText = `Prompt ${session.used_prompts.length}/${allPrompts.length} ready. Click 'Start Recording' to answer.`;
   } catch (e) {
     console.error(e);
-    statusEl.innerText = "Could not fetch prompt. Is backend running? " + e.message;
+    statusEl.innerText = "Could not get prompt: " + e.message;
     startBtn.disabled = true;
   }
 }
 
-getBtn.addEventListener("click", getPrompt);
+// Check Ollama status on page load
+async function checkOllamaStatus() {
+  try {
+    const response = await fetch(`${BACKEND}/ollama/status`);
+    const data = await response.json();
+    ollamaStatusEl.innerText = data.available ? "🟢 LLM Ready" : "🟡 Fallback Mode";
+    ollamaStatusEl.title = data.message;
+  } catch (e) {
+    ollamaStatusEl.innerText = "🟡 Fallback Mode";
+  }
+}
 
-async function newObject() {
-  if (!session || !session.session_id) {
-    statusEl.innerText = "Please get a prompt first before changing objects.";
+// Generate prompts for the entered object
+async function generatePromptsForObject() {
+  const objectName = objectNameInput.value.trim();
+
+  if (!objectName) {
+    statusEl.innerText = "⚠️ Please enter an object name";
     return;
   }
 
-  statusEl.innerText = "Getting new object...";
+  // Disable button and show loading state
+  generatePromptsBtn.disabled = true;
+  generatePromptsBtn.innerText = "Generating...";
+  statusEl.innerText = `Generating prompts for "${objectName}"...`;
+  ollamaStatusEl.innerText = "⏳ Processing...";
+
   try {
     const formData = new FormData();
-    formData.append("session_id", session.session_id);
+    formData.append("object_name", objectName);
 
-    const response = await fetch(`${BACKEND}/session/change-object`, {
+    const response = await fetch(`${BACKEND}/generate-prompts`, {
       method: "POST",
       body: formData
     });
-    if (!response.ok) throw new Error("Failed to change object");
-    const json = await response.json();
 
-    // Update session data
-    session = {
-      session_id: json.session_id,
-      prompt_text: json.prompt_text,
-      object: json.object,
-      expected_answer: json.expected_answer
-    };
+    if (!response.ok) throw new Error("Failed to generate prompts");
 
-    promptEl.innerText = `Object: ${session.object}\nPrompt: ${session.prompt_text}`;
-    startBtn.disabled = false;
-    statusEl.innerText = "New object selected. Click 'Start Recording' to answer.";
-    resultEl.innerHTML = ""; // Clear previous results
+    const data = await response.json();
+    generatedPrompts = data;
+
+    // Update UI
+    const sourceIcon = data.source === "llm" ? "🤖" : data.source === "cache" ? "💾" : "📝";
+    const sourceText = data.source === "llm" ? "LLM Generated" : data.source === "cache" ? "From Cache" : "Template";
+
+    promptEl.innerHTML = `<strong>Object: ${data.object}</strong><br>
+      <small style="color: #666;">${sourceIcon} ${sourceText} | ${data.questions.length} questions, ${data.sentences.length} sentences</small><br><br>
+      Click "Get Prompt" to start practicing!`;
+
+    // Enable the Get Prompt button
+    getBtn.disabled = false;
+    getBtn.style.background = "#4CAF50";
+
+    // Lock the object input
+    objectNameInput.disabled = true;
+    generatePromptsBtn.disabled = true;
+
+    statusEl.innerText = `✓ Prompts ready for "${objectName}"! Click "Get Prompt" to begin.`;
+    ollamaStatusEl.innerText = sourceIcon + " " + sourceText;
+
   } catch (e) {
     console.error(e);
-    statusEl.innerText = "Could not change object: " + e.message;
+    statusEl.innerText = "❌ Could not generate prompts: " + e.message;
+    generatePromptsBtn.disabled = false;
+    generatePromptsBtn.innerText = "Generate Prompts";
+    checkOllamaStatus(); // Restore status
   }
+}
+
+getBtn.addEventListener("click", getPrompt);
+generatePromptsBtn.addEventListener("click", generatePromptsForObject);
+
+// Check Ollama status when page loads
+checkOllamaStatus();
+
+async function newObject() {
+  // Reset to allow entering a new object
+  session = null;
+  generatedPrompts = null;
+
+  // Re-enable object input
+  objectNameInput.disabled = false;
+  objectNameInput.value = "";
+  generatePromptsBtn.disabled = false;
+  generatePromptsBtn.innerText = "Generate Prompts";
+
+  // Disable Get Prompt button until new object is generated
+  getBtn.disabled = true;
+  getBtn.style.background = "";
+
+  // Clear displays
+  promptEl.innerText = "Enter a new object and click 'Generate Prompts'";
+  resultEl.innerHTML = "";
+  statusEl.innerText = "Ready for new object";
+
+  // Hide New Object button and session info
+  newObjBtn.style.display = "none";
+  sessionInfoEl.classList.remove('active');
+
+  // Keep patient ID locked if it was already set
+  // (patient can continue with same ID across multiple objects)
 }
 
 newObjBtn.addEventListener("click", newObject);

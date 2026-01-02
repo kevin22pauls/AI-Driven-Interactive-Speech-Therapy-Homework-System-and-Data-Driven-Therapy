@@ -521,3 +521,123 @@ def get_phoneme_trends(patient_id: str, phoneme: str) -> List[Dict[str, Any]]:
 
     finally:
         db.close()
+
+
+def save_generated_prompts(
+    object_name: str,
+    prompts_data: Dict,
+    model_name: str = None,
+    generation_method: str = "llm"
+) -> bool:
+    """
+    Save LLM-generated prompts to cache for reuse.
+
+    Args:
+        object_name: Name of the object
+        prompts_data: Dictionary with 'questions' and 'sentences'
+        model_name: Name of the LLM model used (e.g., "llama3.2:3b")
+        generation_method: "llm" or "fallback"
+
+    Returns:
+        True if saved successfully, False otherwise
+    """
+    db = SessionLocal()
+    try:
+        prompts_json = json.dumps(prompts_data)
+
+        # Upsert: insert or update if exists
+        sql = text("""
+            INSERT INTO generated_prompts (object_name, prompts_json, model_name, generation_method, last_used_at)
+            VALUES (:object_name, :prompts_json, :model_name, :generation_method, CURRENT_TIMESTAMP)
+            ON CONFLICT(object_name) DO UPDATE SET
+                prompts_json = :prompts_json,
+                model_name = :model_name,
+                generation_method = :generation_method,
+                last_used_at = CURRENT_TIMESTAMP
+        """)
+
+        db.execute(sql, {
+            "object_name": object_name.lower().strip(),
+            "prompts_json": prompts_json,
+            "model_name": model_name,
+            "generation_method": generation_method
+        })
+        db.commit()
+
+        logger.info(f"Cached generated prompts for '{object_name}'")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to save generated prompts: {e}")
+        db.rollback()
+        return False
+    finally:
+        db.close()
+
+
+def get_cached_prompts(object_name: str) -> Optional[Dict]:
+    """
+    Retrieve cached prompts for an object.
+
+    Args:
+        object_name: Name of the object
+
+    Returns:
+        Dictionary with 'questions' and 'sentences', or None if not found
+    """
+    db = SessionLocal()
+    try:
+        sql = text("""
+            SELECT prompts_json, model_name, generation_method
+            FROM generated_prompts
+            WHERE object_name = :object_name
+        """)
+
+        result = db.execute(sql, {"object_name": object_name.lower().strip()}).fetchone()
+
+        if result:
+            # Update last_used_at
+            update_sql = text("""
+                UPDATE generated_prompts
+                SET last_used_at = CURRENT_TIMESTAMP
+                WHERE object_name = :object_name
+            """)
+            db.execute(update_sql, {"object_name": object_name.lower().strip()})
+            db.commit()
+
+            prompts_data = json.loads(result.prompts_json)
+            logger.info(f"Retrieved cached prompts for '{object_name}' (method: {result.generation_method})")
+            return prompts_data
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Failed to retrieve cached prompts: {e}")
+        return None
+    finally:
+        db.close()
+
+
+def list_generated_objects() -> List[str]:
+    """
+    Get list of all objects with generated prompts.
+
+    Returns:
+        List of object names
+    """
+    db = SessionLocal()
+    try:
+        sql = text("""
+            SELECT object_name
+            FROM generated_prompts
+            ORDER BY last_used_at DESC
+        """)
+
+        results = db.execute(sql).fetchall()
+        return [row.object_name for row in results]
+
+    except Exception as e:
+        logger.error(f"Failed to list generated objects: {e}")
+        return []
+    finally:
+        db.close()
