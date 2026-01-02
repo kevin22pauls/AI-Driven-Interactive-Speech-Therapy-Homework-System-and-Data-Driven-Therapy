@@ -137,15 +137,25 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    ✓ API endpoints for therapist insights
    ✓ Graceful error handling (saves don't block analysis)
 
-7. PROMPT SYSTEM
-   ✓ Object-based prompt generation
-   ✓ 5 objects with multiple prompts each:
-      - bottle, cup, phone, book, chair
-   ✓ Question types: identification, functional, descriptive
-   ✓ Expected answer validation
+7. DYNAMIC PROMPT GENERATION SYSTEM ⭐⭐⭐⭐ NEW
+   ✓ LLM-powered prompt generation for unlimited objects
+   ✓ Ollama integration (zero-cost, local, privacy-preserving)
+   ✓ Support for ANY object (e.g., toothbrush, umbrella, laptop, spoon)
+   ✓ Contextually appropriate question generation:
+      - Identification questions ("What is this object?")
+      - Functional questions ("What do you use it for?")
+      - Descriptive questions ("What color is it?")
+      - Contextual questions ("When do you use it?")
+      - Repetition sentences (simple and advanced)
+   ✓ Multiple expected answers per question for semantic evaluation
+   ✓ Database caching for instant reuse (generated_prompts table)
+   ✓ Graceful fallback to template-based prompts if LLM unavailable
+   ✓ Real-time LLM status indicators in UI (🟢 Ready / 🟡 Fallback)
+   ✓ Prompt source tracking (🤖 LLM Generated / 💾 Cached / 📝 Template)
+   ✓ Smart prompt rotation (no duplicates until all used)
    ✓ Session-based prompt management
-   ✓ Multi-prompt sessions without changing objects
-   ✓ Dynamic object switching
+   ✓ Compatible with legacy hardcoded objects (bottle, cup, phone, book, chair)
+   ✓ English-only transcription to prevent language detection errors
 
 8. THERAPIST DASHBOARD ⭐⭐⭐ NEW
    ✓ Patient progress visualization dashboard
@@ -273,13 +283,14 @@ FINAL PROJECT/
 │   │   └── analysis.py              # API endpoints
 │   │
 │   ├── services/
-│   │   ├── speech_processing.py     # Main analysis pipeline
+│   │   ├── speech_processing.py     # Main analysis pipeline (+ English-only Whisper)
 │   │   ├── semantic_analysis.py     # Semantic evaluation
 │   │   ├── phoneme_analysis.py      # ⭐ Phoneme-level analysis
 │   │   ├── phoneme_lookup.py        # ⭐ CMU Dict wrapper
 │   │   ├── forced_alignment.py      # ⭐ Gentle integration
 │   │   ├── fluency_analysis.py      # ⭐⭐ Fluency & stuttering detection
-│   │   ├── prompts.py               # Prompt management
+│   │   ├── llm_prompt_generator.py  # ⭐⭐⭐⭐ NEW: Ollama LLM integration
+│   │   ├── prompts.py               # Legacy hardcoded prompts
 │   │   ├── metrics.py               # WER, rate, pause calculations
 │   │   └── audio.py                 # Audio preprocessing
 │   │
@@ -289,8 +300,9 @@ FINAL PROJECT/
 │   ├── database/
 │   │   ├── db.py                    # SQLAlchemy engine
 │   │   ├── schema.py                # Table initialization
-│   │   ├── schema.sql               # ⭐ Updated SQL schema with fluency fields
-│   │   └── persistence.py           # ⭐⭐⭐ NEW: Save & query functions
+│   │   ├── schema.sql               # ⭐ SQL schema (fluency + generated_prompts table)
+│   │   ├── persistence.py           # ⭐⭐⭐ Save/query + prompt caching functions
+│   │   └── migrate_add_fluency_columns.py  # Migration script for old databases
 │   │
 │   ├── data/
 │   │   ├── objects.py               # Object definitions
@@ -300,8 +312,8 @@ FINAL PROJECT/
 │   │   └── file_utils.py            # File management
 │   │
 │   ├── frontend/
-│   │   ├── recorder.html            # ⭐ Patient recording interface
-│   │   └── dashboard.html           # ⭐⭐⭐ NEW: Therapist progress dashboard
+│   │   ├── recorder.html            # ⭐⭐⭐⭐ Patient interface with dynamic objects
+│   │   └── dashboard.html           # ⭐⭐⭐ Therapist progress dashboard
 │   │
 │   ├── storage/
 │   │   └── audio/                   # Audio recordings (gitignored)
@@ -313,6 +325,8 @@ FINAL PROJECT/
 │       └── test_persistence.py      # ⭐⭐⭐ Database persistence tests
 │
 ├── docker-compose.yml               # ⭐ Gentle service configuration
+├── OLLAMA_SETUP.md                  # ⭐⭐⭐⭐ NEW: LLM installation & usage guide
+├── TESTING_GUIDE.md                 # ⭐⭐⭐ Dashboard testing guide
 ├── .gitignore                       # Git ignore rules
 └── PROJECT_DOCUMENTATION.txt        # ⭐ This file
 
@@ -603,6 +617,30 @@ GET /session/{session_id}/summary  ⭐⭐⭐ NEW
       * recordings (all recordings in session)
       * session_averages (avg fluency, PER, LFR)
 
+POST /generate-prompts  ⭐⭐⭐⭐ NEW
+  - Generate speech therapy prompts for any object using LLM
+  - Params: object_name (str), force_regenerate (bool, optional)
+  - Returns:
+      * object: object name
+      * questions: array of question objects with expected_answers
+      * sentences: array of sentence objects with difficulty levels
+      * source: "cache" | "llm" | "fallback"
+      * model: LLM model name (if LLM was used)
+  - Automatically caches results in database for instant reuse
+  - Falls back to template prompts if Ollama unavailable
+
+GET /ollama/status  ⭐⭐⭐⭐ NEW
+  - Check if Ollama LLM service is running
+  - Returns:
+      * available: true/false
+      * message: status description
+
+GET /generated-objects  ⭐⭐⭐⭐ NEW
+  - Get list of all objects with cached prompts
+  - Returns:
+      * objects: array of object names
+      * count: total count
+
 
 DATABASE SCHEMA
 ================================================================================
@@ -644,7 +682,7 @@ recordings table:
 
   - created_at (TIMESTAMP)
 
-patient_phoneme_history table:              # ⭐⭐⭐ NEW - Tracks phoneme errors over time
+patient_phoneme_history table:              # ⭐⭐⭐ Tracks phoneme errors over time
   - id (PRIMARY KEY)
   - patient_id
   - phoneme                                 # e.g., 'AA', 'TH', 'R'
@@ -652,6 +690,15 @@ patient_phoneme_history table:              # ⭐⭐⭐ NEW - Tracks phoneme err
   - occurrence_count                        # Total times phoneme appeared
   - last_error_date
   - created_at
+
+generated_prompts table:                    # ⭐⭐⭐⭐ NEW - Caches LLM-generated prompts
+  - id (PRIMARY KEY)
+  - object_name (UNIQUE)                    # e.g., 'toothbrush', 'umbrella'
+  - prompts_json (TEXT)                     # JSON with questions and sentences
+  - model_name (TEXT)                       # e.g., 'llama3.2:3b' or NULL for fallback
+  - generation_method (TEXT)                # 'llm' or 'fallback'
+  - created_at (TIMESTAMP)
+  - last_used_at (TIMESTAMP)                # LRU tracking
 
 
 CHALLENGES FACED
@@ -684,6 +731,16 @@ CHALLENGES FACED
    - Solution: Changed to arrow function: () => loadPatientData() to call
      function without parameters (extracts patient ID from input field)
    - Lesson: Direct function references in event listeners receive event object
+
+4. WHISPER MULTILINGUAL TRANSCRIPTION:
+   - Issue: Whisper transcribing background noise as non-English (Japanese/Chinese)
+   - Impact: Gibberish transcripts like "素っ、素っ…フォー" appearing in results
+   - Root Cause: Whisper's multilingual model trying to interpret unclear audio
+     as speech from other languages without language constraints
+   - Solution: Added language="en" parameter to force English-only transcription,
+     enabled VAD filtering (vad_filter=True) with 500ms silence threshold to
+     better filter out background noise and silence
+   - Lesson: Always constrain language model when target language is known
 
 
 KNOWN LIMITATIONS & FUTURE WORK
@@ -781,9 +838,12 @@ This system uses the following open-source tools and datasets:
 
 - CMU Pronouncing Dictionary (CMU Sphinx)
 - Faster-Whisper (OpenAI Whisper optimized)
+- Ollama (local LLM runtime)
+- Llama 3.2 (Meta AI)
 - Gentle Forced Aligner (lowerquality/gentle)
 - Sentence Transformers (UKPLab)
 - FastAPI framework
+- Chart.js (data visualization)
 
 
 CONTACT & SUPPORT
@@ -793,10 +853,10 @@ For questions, bug reports, or collaboration inquiries:
 - GitHub Issues: [repository URL]
 - Email: [your email]
 
-Last Updated: December 25, 2025
-Version: 2.0.0
-Status: Research MVP with Full Longitudinal Tracking
-Features: Phoneme Analysis + Fluency Analysis + Database Persistence
+Last Updated: January 2, 2026
+Version: 3.0.0
+Status: Research MVP with Unlimited Object Support
+Features: Phoneme + Fluency Analysis | Database Persistence | LLM-Powered Prompts
 
 
 ================================================================================
