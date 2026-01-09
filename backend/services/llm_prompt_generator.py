@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Ollama API endpoint (default local installation)
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
-DEFAULT_MODEL = "llama3.2:3b"  # Lightweight model for prompt generation
+DEFAULT_MODEL = "gemma2:2b"  # Lightweight model for prompt generation
 
 SYSTEM_PROMPT = """You are a speech therapy assistant helping therapists create exercises for aphasia patients.
 

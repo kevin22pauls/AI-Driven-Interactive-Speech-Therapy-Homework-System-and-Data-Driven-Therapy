@@ -385,7 +385,7 @@ def generate_prompts_for_object(object_name: str = Form(...), force_regenerate: 
             save_generated_prompts(
                 object_name,
                 prompts_data,
-                model_name="llama3.2:3b",
+                model_name="gemma2:2b",
                 generation_method="llm"
             )
 
@@ -394,7 +394,7 @@ def generate_prompts_for_object(object_name: str = Form(...), force_regenerate: 
                 "questions": prompts_data["questions"],
                 "sentences": prompts_data["sentences"],
                 "source": "llm",
-                "model": "llama3.2:3b"
+                "model": "gemma2:2b"
             }
         else:
             logger.warning(f"LLM generation failed for '{object_name}', using fallback")
