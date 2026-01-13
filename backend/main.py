@@ -34,3 +34,21 @@ def read_root():
         return FileResponse(frontend_path)
     else:
         return {"message": "Frontend not found. Visit /docs for API documentation."}
+
+@app.get("/recorder")
+def read_recorder():
+    """Serve the recorder HTML file."""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "recorder.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    else:
+        return {"message": "Recorder page not found."}
+
+@app.get("/dashboard")
+def read_dashboard():
+    """Serve the dashboard HTML file."""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "dashboard.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    else:
+        return {"message": "Dashboard page not found."}

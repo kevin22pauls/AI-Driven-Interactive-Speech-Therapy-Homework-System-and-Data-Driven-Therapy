@@ -7,236 +7,212 @@ PROJECT OVERVIEW
 ================================================================================
 This is a research-grade speech therapy system designed for patients with
 aphasia and speech disorders. The system provides automated speech analysis
-at multiple levels: word-level, phoneme-level, and semantic-level.
+at multiple levels: word-level, phoneme-level, semantic-level, and fluency.
 
 Intended Use: Clinical research and speech therapy assessment
 Target Population: Aphasia patients, dysarthria, and speech sound disorders
 Research Status: Suitable for journal publication
 
+KEY INNOVATION: Integration of pretrained ML models for acoustic-level
+phoneme analysis, replacing basic text-based algorithms with state-of-the-art
+deep learning models (Wav2Vec2, Silero VAD, Sentence Transformers).
+
 
 SYSTEM ARCHITECTURE
 ================================================================================
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           FRONTEND LAYER                                 │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │  recorder.html - Browser-based Recording Interface               │  │
-│  │  - MediaRecorder API for audio capture                           │  │
-│  │  - Real-time silence detection (Web Audio API)                   │  │
-│  │  - Result visualization with phoneme error highlighting          │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    ↓ HTTP POST /record
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         BACKEND API LAYER                                │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │  main.py - FastAPI Application                                   │  │
-│  │  routers/analysis.py - API Endpoints                             │  │
-│  │    - /session/start         - Initialize session                 │  │
-│  │    - /session/next-prompt   - Get next prompt                    │  │
-│  │    - /session/change-object - Switch object                      │  │
-│  │    - /record                - Upload & analyze audio             │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        ANALYSIS PIPELINE                                 │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │  services/speech_processing.py - Main Pipeline                   │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-│  ┌─────────────┬─────────────────┬───────────────────┬──────────────┐  │
-│  │  ASR        │  Word-Level     │  Phoneme-Level    │  Semantic    │  │
-│  │  (Whisper)  │  Metrics        │  Analysis         │  Evaluation  │  │
-│  └─────────────┴─────────────────┴───────────────────┴──────────────┘  │
-│        ↓              ↓                   ↓                  ↓          │
-│  Transcription   WER, Rate,         PER, Error          Similarity,    │
-│  + Timestamps    Pause Ratio        Classification      Classification │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        DATA PERSISTENCE                                  │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │  SQLite Database (speechtherapy.db)                              │  │
-│  │  - recordings table: All analysis results                        │  │
-│  │  - patient_phoneme_history: Longitudinal phoneme tracking        │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------------------+
+|                           FRONTEND LAYER                                 |
+|  +-------------------------------------------------------------------+  |
+|  |  recorder.html - Browser-based Recording Interface                |  |
+|  |  - MediaRecorder API for audio capture                            |  |
+|  |  - Real-time silence detection (Web Audio API)                    |  |
+|  |  - Result visualization with phoneme error highlighting           |  |
+|  |                                                                    |  |
+|  |  dashboard.html - Therapist Progress Dashboard                    |  |
+|  |  - Patient progress visualization (Chart.js)                      |  |
+|  |  - Longitudinal metrics tracking                                  |  |
+|  +-------------------------------------------------------------------+  |
++---------------------------------------------------------------------------+
+                                    | HTTP POST /record
+                                    v
++-------------------------------------------------------------------------+
+|                         BACKEND API LAYER                                |
+|  +-------------------------------------------------------------------+  |
+|  |  main.py - FastAPI Application                                    |  |
+|  |  routers/analysis.py - API Endpoints                              |  |
+|  |    - /session/start         - Initialize session                  |  |
+|  |    - /session/next-prompt   - Get next prompt                     |  |
+|  |    - /session/change-object - Switch object                       |  |
+|  |    - /record                - Upload & analyze audio              |  |
+|  |    - /generate-prompts      - LLM-powered prompt generation       |  |
+|  +-------------------------------------------------------------------+  |
++---------------------------------------------------------------------------+
+                                    |
+                                    v
++-------------------------------------------------------------------------+
+|                     ML-POWERED ANALYSIS PIPELINE                         |
+|  +-------------------------------------------------------------------+  |
+|  |  services/speech_processing.py - Main Pipeline Orchestrator       |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                          |
+|  +-------------+----------------+------------------+------------------+  |
+|  |    ASR      |  ML Phoneme    |  ML Fluency     |  ML Semantic     |  |
+|  |  (Whisper)  |  (Wav2Vec2)    |  (Silero VAD)   |  (Transformers)  |  |
+|  +-------------+----------------+------------------+------------------+  |
+|        |              |                 |                  |             |
+|        v              v                 v                  v             |
+|  Transcription   GOP Scores,       VAD-based         Similarity,        |
+|  + Timestamps    IPA Phonemes,     Pause Detection   Paraphasia         |
+|                  PER (ML)          Stutter Detection Classification     |
++---------------------------------------------------------------------------+
+                                    |
+                                    v
++-------------------------------------------------------------------------+
+|                        DATA PERSISTENCE                                  |
+|  +-------------------------------------------------------------------+  |
+|  |  SQLite Database (speechtherapy.db)                               |  |
+|  |  - recordings table: All analysis results + ML metrics            |  |
+|  |  - patient_phoneme_history: Longitudinal phoneme tracking         |  |
+|  |  - generated_prompts: LLM prompt cache                            |  |
+|  |  - session_progress: Session-level aggregates                     |  |
+|  |  - patient_baselines: Baseline metrics per patient                |  |
+|  +-------------------------------------------------------------------+  |
++---------------------------------------------------------------------------+
 
 
 SUCCESSFULLY IMPLEMENTED FEATURES
 ================================================================================
 
 1. AUTOMATIC SPEECH RECOGNITION (ASR)
-   ✓ Faster-Whisper model integration (small/tiny models)
-   ✓ CPU-optimized inference (int8 quantization)
-   ✓ Segment-level timestamps
-   ✓ Multi-format audio support (webm, wav, mp3)
-   ✓ Robust error handling for transcription failures
+   [x] Faster-Whisper model integration (small/medium models)
+   [x] CPU-optimized inference (int8 quantization)
+   [x] Word-level timestamps with confidence scores
+   [x] Multi-format audio support (webm, wav, mp3)
+   [x] PyAV-based audio conversion (bundled FFmpeg)
+   [x] English-only transcription to prevent language detection errors
+   [x] SONIVA model support (fine-tuned for aphasia speech) - optional
 
 2. WORD-LEVEL METRICS
-   ✓ Word Error Rate (WER) calculation using jiwer
-   ✓ Speech rate (words per minute)
-   ✓ Pause ratio (silence percentage)
-   ✓ Segment-level analysis
+   [x] Word Error Rate (WER) calculation using jiwer
+   [x] Speech rate (words per minute)
+   [x] Pause ratio (silence percentage)
+   [x] Segment-level analysis
 
-3. PHONEME-LEVEL ANALYSIS ⭐ NEW
-   ✓ CMU Pronouncing Dictionary integration (134,000+ words)
-   ✓ Phoneme Error Rate (PER) calculation
-   ✓ Error type classification:
-      - Substitutions (e.g., AA → UW in "bottle" → "bootle")
-      - Deletions (missing phonemes)
-      - Insertions (extra phonemes)
-   ✓ Problematic phoneme identification
-   ✓ Clinical insights generation
-   ✓ Forced alignment support (Gentle integration)
-   ✓ ARPAbet to IPA conversion for display
-   ✓ Database storage for longitudinal tracking
+3. ML-BASED PHONEME ANALYSIS (NEW - Wav2Vec2)
+   [x] Wav2Vec2 acoustic phoneme recognition (facebook/wav2vec2-lv-60-espeak-cv-ft)
+   [x] Direct audio-to-IPA phoneme mapping
+   [x] IPA to ARPAbet conversion for consistent comparison
+   [x] Goodness of Pronunciation (GOP) scores per phoneme
+   [x] ML-based Phoneme Error Rate (PER_ML)
+   [x] Dynamic programming alignment (expected vs detected)
+   [x] Model confidence scores
+   [x] Frame-level probability analysis
+   [x] Database persistence of all ML phoneme metrics
 
-4. SEMANTIC ANALYSIS
-   ✓ Sentence transformer-based similarity (all-MiniLM-L6-v2)
-   ✓ Three-tier classification (correct/partial/wrong)
-   ✓ Object identification verification
-   ✓ Paraphrase detection
-   ✓ Semantic substitution tracking
-   ✓ Clinical marker identification
+4. TEXT-BASED PHONEME ANALYSIS (Enhanced)
+   [x] CMU Pronouncing Dictionary integration (134,000+ words)
+   [x] Weighted Phoneme Error Rate (WPER) with phonetic distance
+   [x] Phonetic feature-based distance calculation
+   [x] Error type classification:
+      - Substitutions (phonetically similar vs dissimilar)
+      - Deletions (stressed vs unstressed)
+      - Insertions
+      - Metathesis (transposition)
+   [x] Conduite d'approche detection (progressive improvement)
+   [x] Multi-attempt segmentation and analysis
+   [x] Phoneme class error tracking (fricatives, stops, vowels, etc.)
+   [x] Clinical insights generation based on error patterns
 
-5. FLUENCY & STUTTERING ANALYSIS ⭐ NEW
-   ✓ Longest Fluent Run (LFR) calculation - key progress metric
-   ✓ Pause detection and classification:
-      - Hesitations (300ms - 1s pauses)
-      - Blocks (>1s pauses)
-      - Pause location tracking (beginning, middle, end)
-   ✓ Stuttering event detection:
-      - Word repetitions (e.g., "I I I want")
-      - Prolongations (stretched sounds based on duration)
-      - Interjections (um, uh, like, etc.)
-   ✓ Fluency metrics:
-      - Dysfluencies per 100 words
-      - Dysfluencies per minute
-      - Fluency percentage
-      - Speech rate variability (consistency of pace)
-   ✓ Clinical insights for fluency therapy
-   ✓ Automated clinical recommendations
+5. ENHANCED SEMANTIC ANALYSIS
+   [x] Sentence transformer-based similarity (all-MiniLM-L6-v2)
+   [x] Multi-tier classification:
+      - Correct (high similarity)
+      - Partial (moderate similarity)
+      - Wrong (low similarity)
+      - Circumlocution (descriptive workaround)
+      - Semantic paraphasia (related word substitution)
+   [x] WordNet-based category similarity
+   [x] Object feature matching for circumlocution detection
+   [x] Paraphasia type identification (semantic, phonemic)
+   [x] Clinical significance notes
 
-6. DATA PERSISTENCE & SESSION MANAGEMENT ⭐⭐⭐ NEW
-   ✓ Automatic database saving of all analysis results
-   ✓ Session tracking (grouping multiple prompts together)
-   ✓ Patient identification and longitudinal tracking
-   ✓ Comprehensive query functions:
+6. ML-BASED FLUENCY & STUTTERING ANALYSIS (Silero VAD)
+   [x] Silero VAD for voice activity detection
+   [x] ML-based pause detection and classification:
+      - Hesitations (300ms - 1s)
+      - Blocks (>1s)
+      - Anomic pauses (word-finding difficulty)
+      - Apraxic pauses (motor planning)
+   [x] ML-based stuttering detection:
+      - Repetitions (word/sound level)
+      - Prolongations
+      - Interjections
+      - Blocks
+   [x] Longest Fluent Run (LFR) with tolerance
+   [x] SSI-4 approximation (Stuttering Severity Instrument)
+   [x] Speech rate metrics:
+      - Articulation rate (excluding pauses)
+      - Speaking rate (including pauses)
+      - Phonation time and ratio
+   [x] Rate variability analysis (CV, PVI, trend)
+   [x] Weighted fluency scoring
+
+7. DATA PERSISTENCE & SESSION MANAGEMENT
+   [x] Automatic database saving of all analysis results
+   [x] ML phoneme analysis persistence (GOP, PER_ML, alignment)
+   [x] Session tracking (grouping multiple prompts)
+   [x] Patient identification and longitudinal tracking
+   [x] Comprehensive query functions:
       - Patient recording history with filtering
       - Progress tracking over time (trends)
-      - Phoneme trend analysis (specific phoneme improvement)
+      - Phoneme trend analysis
       - Session summaries with aggregate metrics
-   ✓ Patient phoneme history tracking table
-   ✓ Aggregated progress metrics:
-      - Average fluency, PER, WER, LFR
-      - LFR trend over time (daily averages)
-      - Most problematic phonemes ranked
-      - Performance by object
-   ✓ API endpoints for therapist insights
-   ✓ Graceful error handling (saves don't block analysis)
+   [x] Patient phoneme history tracking
+   [x] API endpoints for therapist insights
 
-7. DYNAMIC PROMPT GENERATION SYSTEM ⭐⭐⭐⭐ NEW
-   ✓ LLM-powered prompt generation for unlimited objects
-   ✓ Ollama integration (zero-cost, local, privacy-preserving)
-   ✓ Support for ANY object (e.g., toothbrush, umbrella, laptop, spoon)
-   ✓ Contextually appropriate question generation:
-      - Identification questions ("What is this object?")
-      - Functional questions ("What do you use it for?")
-      - Descriptive questions ("What color is it?")
-      - Contextual questions ("When do you use it?")
-      - Repetition sentences (simple and advanced)
-   ✓ Multiple expected answers per question for semantic evaluation
-   ✓ Database caching for instant reuse (generated_prompts table)
-   ✓ Graceful fallback to template-based prompts if LLM unavailable
-   ✓ Real-time LLM status indicators in UI (🟢 Ready / 🟡 Fallback)
-   ✓ Prompt source tracking (🤖 LLM Generated / 💾 Cached / 📝 Template)
-   ✓ Smart prompt rotation (no duplicates until all used)
-   ✓ Session-based prompt management
-   ✓ Compatible with legacy hardcoded objects (bottle, cup, phone, book, chair)
-   ✓ English-only transcription to prevent language detection errors
+8. DYNAMIC PROMPT GENERATION (LLM-Powered)
+   [x] Ollama integration (zero-cost, local, privacy-preserving)
+   [x] Default model: gemma2:2b (lightweight, fast)
+   [x] Support for ANY object (unlimited vocabulary)
+   [x] Contextually appropriate question generation
+   [x] Multiple expected answers per question
+   [x] Database caching for instant reuse
+   [x] Graceful fallback to template-based prompts
+   [x] Real-time LLM status indicators in UI
 
-8. THERAPIST DASHBOARD ⭐⭐⭐ NEW
-   ✓ Patient progress visualization dashboard
-   ✓ Interactive Chart.js visualizations:
-      - LFR trend over time (line chart)
-      - PER trend over time (line chart)
-      - Fluency percentage trend (line chart)
-      - Most problematic phonemes (bar chart, top 10)
-   ✓ Clinical insights panel with automated recommendations
-   ✓ Summary metric cards (total recordings, avg PER, avg LFR, avg fluency)
-   ✓ Recent sessions table with expandable details
-   ✓ Session drill-down showing:
-      - Full transcript and all metrics
-      - Detailed phoneme errors list
-      - Stuttering events breakdown
-      - Clinical notes per recording
-   ✓ Patient selector with real-time data loading
-   ✓ Refresh capability for updated data
-   ✓ Responsive design for mobile/tablet/desktop
-   ✓ Color-coded insights (positive, neutral, focus areas)
+9. THERAPIST DASHBOARD
+   [x] Patient progress visualization
+   [x] Interactive Chart.js visualizations
+   [x] Clinical insights panel
+   [x] Summary metric cards
+   [x] Recent sessions table with expandable details
+   [x] Patient selector with real-time data loading
 
-9. USER INTERFACE (Patient/Recorder)
-   ✓ Browser-based audio recording
-   ✓ Automatic silence detection (VAD)
-   ✓ Real-time status updates
-   ✓ Comprehensive result display:
-      - Transcript
-      - Semantic evaluation with color coding
-      - Phoneme error table with highlighting
-      - Fluency analysis with LFR and stuttering events ⭐ NEW
-      - Speech metrics
-      - Clinical insights
-   ✓ Collapsible detailed views for:
-      - Phoneme errors
-      - Stuttering events ⭐ NEW
-      - Pause details ⭐ NEW
-   ✓ Session management buttons
-
-10. DATABASE & STORAGE
-   ✓ SQLite database with comprehensive schema
-   ✓ Recordings table with all metrics
-   ✓ Patient phoneme history tracking
-   ✓ JSON storage for complex data
-   ✓ Indexed for performance
-   ✓ Audio file management with timestamped names
-
-9. TESTING & QUALITY ASSURANCE
-   ✓ Unit tests for phoneme analysis
-   ✓ Test coverage for PER calculation
-   ✓ Alignment algorithm testing
-   ✓ Clinical note generation tests
-   ✓ CMU dictionary lookup tests
-   ✓ Fluency analysis tests ⭐ NEW:
-      - Pause detection testing
-      - Repetition detection testing
-      - LFR calculation testing
-      - Interjection detection testing
-      - Speech rate variability testing
-
-10. DEPLOYMENT & INFRASTRUCTURE
-   ✓ Docker Compose configuration for Gentle
-   ✓ Modular service architecture
-   ✓ Environment variable configuration
-   ✓ Graceful degradation (works without Gentle)
-   ✓ Comprehensive logging
+10. USER INTERFACE (Patient/Recorder)
+    [x] Browser-based audio recording
+    [x] Automatic silence detection (VAD)
+    [x] Comprehensive result display
+    [x] Collapsible detailed views
+    [x] Session management
 
 
 TECHNICAL SPECIFICATIONS
 ================================================================================
 
 BACKEND STACK:
-  - Framework: FastAPI 0.x
+  - Framework: FastAPI
   - ASGI Server: Uvicorn
   - Database: SQLite with SQLAlchemy ORM
   - ML Models:
-      * Faster-Whisper (small/tiny) for ASR
+      * Faster-Whisper (small/medium) for ASR
+      * Wav2Vec2 (facebook/wav2vec2-lv-60-espeak-cv-ft) for phoneme recognition
+      * Silero VAD for voice activity detection
       * Sentence-Transformers (all-MiniLM-L6-v2) for semantics
   - Phoneme Analysis:
       * CMU Pronouncing Dictionary (134,000+ words)
-      * Edit distance algorithms for alignment
-      * Gentle forced aligner (optional, via Docker)
+      * phonemizer + espeak-ng for G2P
+      * Edit distance algorithms with phonetic weighting
 
 FRONTEND STACK:
   - Pure HTML5 + Vanilla JavaScript (no frameworks)
@@ -244,225 +220,293 @@ FRONTEND STACK:
       * MediaRecorder API (audio capture)
       * Web Audio API (silence detection)
       * Fetch API (HTTP communication)
+  - Chart.js for data visualization
 
 AUDIO PROCESSING:
   - Supported formats: webm, wav, mp3, ogg, flac
-  - Silence detection: RMS-based energy threshold
+  - PyAV for audio conversion (bundled FFmpeg)
+  - Silero VAD for speech segment detection
   - Auto-stop: 900ms silence or 8s timeout
 
-DEPENDENCIES (requirements.txt):
-  - fastapi
-  - uvicorn
-  - sqlalchemy
-  - python-multipart
-  - pydantic
+KEY DEPENDENCIES (requirements.txt):
+  - fastapi, uvicorn
+  - sqlalchemy, python-multipart
   - faster-whisper
-  - torch
-  - numpy
-  - scipy
-  - noisereduce
-  - silero-vad
-  - jiwer
+  - torch, torchaudio
+  - transformers (Wav2Vec2)
   - sentence-transformers
-  - soundfile
-  - editdistance
-  - requests
-  - scikit-learn
+  - silero-vad
+  - phonemizer
+  - numpy, scipy
+  - noisereduce
+  - jiwer, editdistance
+  - av (PyAV for audio conversion)
+  - nltk (WordNet, CMUdict)
 
 
 FILE STRUCTURE
 ================================================================================
 
 FINAL PROJECT/
-├── backend/
-│   ├── main.py                      # FastAPI application entry point
-│   ├── config.py                    # Configuration settings
-│   ├── requirements.txt             # Python dependencies
-│   │
-│   ├── routers/
-│   │   └── analysis.py              # API endpoints
-│   │
-│   ├── services/
-│   │   ├── speech_processing.py     # Main analysis pipeline (+ English-only Whisper)
-│   │   ├── semantic_analysis.py     # Semantic evaluation
-│   │   ├── phoneme_analysis.py      # ⭐ Phoneme-level analysis
-│   │   ├── phoneme_lookup.py        # ⭐ CMU Dict wrapper
-│   │   ├── forced_alignment.py      # ⭐ Gentle integration
-│   │   ├── fluency_analysis.py      # ⭐⭐ Fluency & stuttering detection
-│   │   ├── llm_prompt_generator.py  # ⭐⭐⭐⭐ NEW: Ollama LLM integration
-│   │   ├── prompts.py               # Legacy hardcoded prompts
-│   │   ├── metrics.py               # WER, rate, pause calculations
-│   │   └── audio.py                 # Audio preprocessing
-│   │
-│   ├── models/
-│   │   └── whisper_model.py         # Whisper ASR singleton
-│   │
-│   ├── database/
-│   │   ├── db.py                    # SQLAlchemy engine
-│   │   ├── schema.py                # Table initialization
-│   │   ├── schema.sql               # ⭐ SQL schema (fluency + generated_prompts table)
-│   │   ├── persistence.py           # ⭐⭐⭐ Save/query + prompt caching functions
-│   │   └── migrate_add_fluency_columns.py  # Migration script for old databases
-│   │
-│   ├── data/
-│   │   ├── objects.py               # Object definitions
-│   │   └── cmudict-0.7b.txt         # ⭐ CMU Pronouncing Dictionary
-│   │
-│   ├── utils/
-│   │   └── file_utils.py            # File management
-│   │
-│   ├── frontend/
-│   │   ├── recorder.html            # ⭐⭐⭐⭐ Patient interface with dynamic objects
-│   │   └── dashboard.html           # ⭐⭐⭐ Therapist progress dashboard
-│   │
-│   ├── storage/
-│   │   └── audio/                   # Audio recordings (gitignored)
-│   │
-│   └── tests/                       # ⭐ NEW
-│       ├── __init__.py
-│       ├── test_phoneme_analysis.py # Phoneme unit tests
-│       ├── test_fluency_analysis.py # ⭐⭐ Fluency unit tests
-│       └── test_persistence.py      # ⭐⭐⭐ Database persistence tests
-│
-├── docker-compose.yml               # ⭐ Gentle service configuration
-├── OLLAMA_SETUP.md                  # ⭐⭐⭐⭐ NEW: LLM installation & usage guide
-├── TESTING_GUIDE.md                 # ⭐⭐⭐ Dashboard testing guide
-├── .gitignore                       # Git ignore rules
-└── PROJECT_DOCUMENTATION.txt        # ⭐ This file
++-- backend/
+|   +-- main.py                      # FastAPI application entry point
+|   +-- config.py                    # Configuration (DB_URL, model paths)
+|   +-- requirements.txt             # Python dependencies
+|   |
+|   +-- routers/
+|   |   +-- analysis.py              # API endpoints
+|   |
+|   +-- services/
+|   |   +-- speech_processing.py     # Main analysis pipeline orchestrator
+|   |   +-- semantic_analysis.py     # Basic semantic evaluation
+|   |   +-- enhanced_semantic_analysis.py  # Advanced semantic with paraphasia
+|   |   +-- phoneme_analysis.py      # Basic phoneme analysis
+|   |   +-- enhanced_phoneme_analysis.py   # WPER, conduite d'approche
+|   |   +-- phoneme_features.py      # Phonetic feature distances
+|   |   +-- phoneme_mapping.py       # IPA <-> ARPAbet conversion
+|   |   +-- phoneme_lookup.py        # CMU Dict wrapper
+|   |   +-- ml_phoneme.py            # Wav2Vec2 phoneme recognition
+|   |   +-- ml_models.py             # ML model registry/loader
+|   |   +-- ml_vad.py                # Silero VAD wrapper
+|   |   +-- ml_stutter.py            # ML-based stuttering detection
+|   |   +-- fluency_analysis.py      # Basic fluency analysis
+|   |   +-- enhanced_fluency_analysis.py   # SSI-4, rate variability
+|   |   +-- llm_prompt_generator.py  # Ollama LLM integration
+|   |   +-- prompts.py               # Legacy hardcoded prompts
+|   |   +-- metrics.py               # WER, rate, pause calculations
+|   |   +-- audio.py                 # Audio preprocessing
+|   |   +-- forced_alignment.py      # Gentle integration (optional)
+|   |
+|   +-- models/
+|   |   +-- whisper_model.py         # Whisper ASR singleton
+|   |   +-- cache/                   # Hugging Face model cache
+|   |
+|   +-- database/
+|   |   +-- db.py                    # SQLAlchemy engine
+|   |   +-- schema.py                # Table initialization
+|   |   +-- schema.sql               # Full SQL schema
+|   |   +-- persistence.py           # Save/query functions
+|   |   +-- migrate_ml_phoneme.py    # Migration for ML columns
+|   |   +-- migrate_enhanced_schema.py  # Migration for enhanced analysis
+|   |
+|   +-- data/
+|   |   +-- objects.py               # Object definitions
+|   |   +-- cmudict-0.7b.txt         # CMU Pronouncing Dictionary
+|   |
+|   +-- utils/
+|   |   +-- file_utils.py            # File management
+|   |   +-- audio_converter.py       # PyAV audio conversion
+|   |
+|   +-- frontend/
+|   |   +-- recorder.html            # Patient recording interface
+|   |   +-- dashboard.html           # Therapist progress dashboard
+|   |
+|   +-- storage/
+|   |   +-- audio/                   # Audio recordings (gitignored)
+|   |
+|   +-- tests/
+|       +-- test_phoneme_analysis.py
+|       +-- test_fluency_analysis.py
+|       +-- test_persistence.py
+|
++-- docker-compose.yml               # Gentle service configuration
++-- OLLAMA_SETUP.md                  # LLM installation guide
++-- TESTING_GUIDE.md                 # Dashboard testing guide
++-- project_documentation.txt        # This file
 
 
 KEY ALGORITHMS
 ================================================================================
 
-1. PHONEME ERROR RATE (PER) CALCULATION:
+1. ML-BASED PHONEME RECOGNITION (Wav2Vec2):
 
-   PER = (S + D + I) / N
+   Model: facebook/wav2vec2-lv-60-espeak-cv-ft
+   Output: IPA phoneme sequence from raw audio
 
-   Where:
-   - S = Number of phoneme substitutions
-   - D = Number of phoneme deletions
-   - I = Number of phoneme insertions
-   - N = Total number of phonemes in reference
+   Process:
+   1. Load audio, resample to 16kHz
+   2. Extract features using Wav2Vec2FeatureExtractor
+   3. Run through Wav2Vec2ForCTC model
+   4. Decode logits to IPA phonemes via CTC
+   5. Convert IPA to ARPAbet for comparison with CMUdict
+   6. Calculate GOP from frame probabilities
 
-   Implementation: Levenshtein distance on phoneme sequences
+2. GOODNESS OF PRONUNCIATION (GOP):
 
-2. PHONEME ALIGNMENT:
+   GOP = log P(phoneme | acoustic features)
 
-   Uses dynamic programming (similar to sequence alignment in bioinformatics)
-   to find optimal alignment between expected and actual phoneme sequences.
+   Calculation:
+   1. Get frame-level softmax probabilities from model
+   2. For each phoneme segment, average max probabilities
+   3. Take log probability as GOP score
+   4. Score near 0 = good pronunciation
+   5. Score << 0 = poor pronunciation
 
-   Algorithm: Wagner-Fischer algorithm (edit distance with backtracking)
+3. IPA TO ARPABET CONVERSION:
 
-   Example:
-   Expected: B  AH  T  AH  L    (bottle)
-   Actual:   B  UW  T  AH  L    (bootle)
-   Error:       ^                (substitution: AH → UW)
-
-3. SEMANTIC SIMILARITY:
-
-   Uses sentence transformers to compute cosine similarity between
-   expected answer and transcript embeddings.
-
-   Thresholds:
-   - > 0.85: Correct
-   - 0.60 - 0.85: Partial
-   - < 0.60: Wrong
-
-4. SPEECH RATE CALCULATION:
-
-   Speech Rate = Total Words / (End Time - Start Time) * 60
-
-   Units: Words per minute (WPM)
-
-5. PAUSE RATIO:
-
-   Pause Ratio = Total Pause Duration / Total Speech Duration
-
-   Calculated from inter-segment gaps
-
-6. LONGEST FLUENT RUN (LFR): ⭐⭐ NEW
-
-   LFR = Maximum consecutive words spoken without dysfluencies
-
-   Dysfluencies include:
-   - Pauses > 300ms (hesitations)
-   - Pauses > 1000ms (blocks)
-   - Word repetitions
-   - Interjections (filler words)
-   - Prolongations
-
-   Algorithm:
-   1. Mark all dysfluent positions in word sequence
-   2. Find longest continuous run of non-dysfluent words
-   3. Return count of words in longest run
+   Wav2Vec2 outputs IPA symbols, CMUdict uses ARPAbet.
+   phoneme_mapping.py provides bidirectional conversion.
 
    Example:
-   "I... I want um to drink water" → LFR = 3 ("to drink water")
+   IPA:     [a, r, a, h, i, u:, s, t, o, b, a, k]
+   ARPAbet: [AA, R, AA, HH, IY, UW, S, T, OW, B, AA, K]
 
-7. PAUSE DETECTION: ⭐⭐ NEW
+4. WEIGHTED PHONEME ERROR RATE (WPER):
 
-   Pause Duration = word[i+1].start - word[i].end
+   WPER = Sum(error_weights) / N
 
-   Classification:
-   - < 300ms: Normal (not counted)
-   - 300ms - 1000ms: Hesitation
-   - > 1000ms: Block/significant pause
+   Weights based on phonetic distance:
+   - Phonetically similar substitution: 0.3
+   - Phonetically dissimilar substitution: 0.7
+   - Deletion (unstressed): 0.4
+   - Deletion (stressed): 0.8
+   - Insertion: 0.6
+   - Metathesis: 0.5
 
-   Location tracking:
-   - Beginning: Pause after first word
-   - Middle: Pause in middle of utterance
-   - End: Pause before last word
+5. PHONETIC DISTANCE:
 
-8. STUTTERING EVENT DETECTION: ⭐⭐ NEW
+   Based on articulatory features:
+   - Voicing (voiced/voiceless): 15%
+   - Place of articulation: 25%
+   - Manner of articulation: 30%
+   - Vowel height: 15%
+   - Vowel backness: 15%
 
-   Repetitions:
-   - Detect consecutive identical words
-   - Count repetition frequency
-   - Example: "I I I" → 3 repetitions
+6. SILERO VAD FOR PAUSE DETECTION:
 
-   Interjections:
-   - Match against filler word list (um, uh, like, etc.)
-   - Flag as dysfluency markers
+   Model: silero-vad (snakers4/silero-vad)
 
-   Prolongations:
-   - Calculate expected word duration: avg_char_duration * word_length
-   - Detect outliers > 2 standard deviations above mean
-   - Flag words with duration > 500ms as potentially prolonged
+   Process:
+   1. Run VAD on audio to get speech probabilities
+   2. Identify speech vs non-speech segments
+   3. Calculate pause durations between speech segments
+   4. Classify pauses by duration and context:
+      - Hesitation: 300ms - 1000ms
+      - Block: >1000ms
+      - Anomic: Before content word
+      - Apraxic: Multiple attempts pattern
 
-9. FLUENCY PERCENTAGE: ⭐⭐ NEW
+7. SSI-4 APPROXIMATION:
 
-   Fluency % = 100 - (Dysfluencies / Total Words * 100)
+   Stuttering Severity Instrument scoring:
+   - Frequency: % of syllables stuttered
+   - Duration: Average stutter duration
+   - Total score maps to severity level
 
-   Where dysfluencies = pauses + stuttering events
+8. SEMANTIC PARAPHASIA DETECTION:
 
-10. SPEECH RATE VARIABILITY: ⭐⭐ NEW
-
-    Measures consistency of speaking pace (coefficient of variation)
-
-    Algorithm:
-    1. Calculate speech rate for 3-word sliding windows
-    2. Compute mean and standard deviation of rates
-    3. CV = std_dev / mean
-
-    Higher CV indicates more variable/inconsistent pace (common in dysfluency)
+   Uses WordNet for category analysis:
+   1. Get hypernym chains for expected and produced words
+   2. Find lowest common ancestor
+   3. Calculate semantic distance
+   4. Classify: semantic (related category) vs phonemic (sound-alike)
 
 
-CLINICAL INSIGHTS GENERATION
+DATABASE SCHEMA
 ================================================================================
 
-The system automatically generates clinical recommendations based on:
+recordings table:
+  - id (PRIMARY KEY)
+  - session_id, patient_id
+  - object_name, prompt_text, expected_answer
+  - audio_path, transcript
 
-1. Overall PER score
-2. Error type distribution
-3. Specific problematic phonemes
-4. Error patterns (e.g., consistent substitutions)
-5. Phoneme class (vowels, fricatives, liquids)
+  # Word-level metrics
+  - wer, speech_rate, pause_ratio
 
-Example Output:
-"Moderate phoneme errors detected"
-"Most problematic phonemes: AA (2x), AH (1x)"
-"Common substitution pattern: AA→UW"
-"Consider vowel discrimination exercises"
+  # Text-based phoneme metrics
+  - per, wper, total_phonemes
+  - phoneme_errors_json, problematic_phonemes_json
+  - phoneme_class_errors_json, error_pattern_analysis_json
+  - conduite_d_approche_detected, multi_attempt_analysis_json
+  - clinical_notes_json
+
+  # ML Phoneme metrics (NEW)
+  - ml_per                       # ML-based PER
+  - ml_gop                       # Overall GOP score
+  - ml_confidence                # Model confidence
+  - ml_detected_phonemes_json    # Detected ARPAbet sequence
+  - ml_detected_ipa_json         # Detected IPA sequence
+  - ml_alignment_json            # (expected, detected) pairs
+  - ml_phoneme_scores_json       # Per-phoneme GOP scores
+
+  # Semantic metrics
+  - semantic_classification, semantic_score
+  - direct_similarity, category_similarity
+  - circumlocution_detected, circumlocution_features_json
+  - semantic_paraphasia_json
+
+  # Enhanced fluency metrics
+  - longest_fluent_run, lfr_with_tolerance, lfr_ratio
+  - total_pauses, hesitation_count, block_count
+  - anomic_pause_count, apraxic_pause_count
+  - mean_pause_duration
+  - articulation_rate, speaking_rate, pause_adjusted_rate
+  - phonation_time, phonation_ratio, pathological_pause_ratio
+  - local_cv, global_cv, normalized_pvi, rate_trend
+  - ssi_frequency_pct, ssi_frequency_score
+  - ssi_avg_duration, ssi_duration_score
+  - ssi_total_score, ssi_severity
+  - standard_fluency_pct, weighted_fluency_pct, clinical_fluency_pct
+  - stuttering_events_json, pauses_json, fluency_notes_json
+  - dysfluency_profile_json
+
+  # Metadata
+  - analysis_mode, disorder_type, created_at
+
+patient_phoneme_history table:
+  - id, patient_id, phoneme
+  - error_count, occurrence_count
+  - last_error_date, created_at
+
+generated_prompts table:
+  - id, object_name (UNIQUE)
+  - prompts_json, model_name, generation_method
+  - created_at, last_used_at
+
+session_progress table:
+  - id, session_id (UNIQUE), patient_id
+  - start_time, end_time
+  - total_recordings
+  - avg_wper, avg_per, avg_weighted_fluency, avg_lfr, avg_ssi_score
+  - objects_practiced, clinical_summary_json
+
+patient_baselines table:
+  - id, patient_id (UNIQUE), disorder_type
+  - baseline_per, baseline_wper, baseline_lfr, baseline_fluency
+  - baseline_articulation_rate
+  - mean_pause_duration, std_pause_duration, cv_rate
+  - baseline_date, notes
+
+
+API ENDPOINTS
+================================================================================
+
+POST /record
+  - Main analysis endpoint
+  - Returns comprehensive analysis including ML phoneme metrics:
+      * ml_analysis: {
+          detected_phonemes: [],      # ARPAbet
+          detected_phonemes_ipa: [],  # IPA
+          expected_phonemes: [],      # ARPAbet from CMUdict
+          per_ml: float,              # ML-based PER
+          overall_gop: float,         # GOP score
+          model_confidence: float,
+          alignment: [(exp, det), ...],
+          phoneme_scores: [{phoneme, gop_score, ...}, ...]
+        }
+
+GET /patient/{patient_id}/history
+  - Returns recordings with ML metrics included
+
+GET /patient/{patient_id}/progress
+  - Aggregated progress including ML metrics
+
+POST /generate-prompts
+  - LLM-powered prompt generation
+
+GET /ollama/status
+  - Check LLM availability
 
 
 RESEARCH APPLICATIONS
@@ -470,19 +514,14 @@ RESEARCH APPLICATIONS
 
 This system enables research on:
 
-1. Phoneme-level error patterns in aphasia
-2. Longitudinal tracking of pronunciation improvement ⭐⭐⭐ ENABLED
-3. Identification of problematic phonemes per patient ⭐⭐⭐ ENABLED
-4. Correlation between semantic and phonetic errors
-5. Automated homework compliance monitoring ⭐⭐⭐ ENABLED (session tracking)
-6. Large-scale speech therapy outcome studies ⭐⭐⭐ ENABLED (database persistence)
-7. Fluency disorder progression tracking ⭐⭐⭐ ENABLED
-8. Stuttering pattern analysis and treatment efficacy ⭐⭐⭐ ENABLED
-9. Longest Fluent Run (LFR) as progress indicator ⭐⭐⭐ ENABLED
-10. Objective dysfluency frequency measurement ⭐⭐⭐ ENABLED
-11. Patient-specific phoneme trend analysis ⭐⭐⭐ NEW
-12. Multi-session progress comparison ⭐⭐⭐ NEW
-13. Object-specific performance tracking ⭐⭐⭐ NEW
+1. Acoustic phoneme analysis in disordered speech
+2. GOP-based pronunciation assessment in aphasia
+3. Longitudinal tracking with objective ML metrics
+4. Comparison of text-based vs acoustic phoneme analysis
+5. Semantic paraphasia patterns and recovery
+6. Fluency disorder progression with VAD-based metrics
+7. SSI-4 validation with automated scoring
+8. Multi-modal speech assessment (acoustic + linguistic)
 
 
 USAGE INSTRUCTIONS
@@ -494,253 +533,21 @@ SETUP:
    cd backend
    pip install -r requirements.txt
 
-2. (Optional) Start Gentle service for forced alignment:
-   docker-compose up -d gentle
+2. Install espeak-ng (required for phonemizer):
+   Windows: winget install eSpeak-NG.eSpeak-NG
+   Linux: apt-get install espeak-ng
+   Mac: brew install espeak-ng
 
-3. Start the backend server:
+3. (Optional) Install Ollama for LLM prompts:
+   See OLLAMA_SETUP.md
+
+4. Start the backend server:
    cd backend
    uvicorn main:app --reload --port 8000
 
-4. Open frontend:
-   - Patient Interface: Open backend/frontend/recorder.html in a web browser
-   - Therapist Dashboard: Open backend/frontend/dashboard.html in a web browser
-
-PATIENT WORKFLOW (recorder.html):
-
-1. Click "Get Prompt" to start a session
-2. Read the prompt aloud (e.g., "What is this object?")
-3. Click "Start Recording" and speak your answer
-4. Recording stops automatically after silence or 8 seconds
-5. View comprehensive analysis:
-   - Transcript
-   - Semantic evaluation (correct/partial/wrong)
-   - Phoneme Error Rate (PER)
-   - Problematic phonemes
-   - Clinical insights
-   - Detailed error table
-
-6. Click "Get Prompt" again for another prompt with same object
-7. Click "New Object" to switch to a different object
-
-THERAPIST WORKFLOW (dashboard.html): ⭐⭐⭐ NEW
-
-1. Enter patient ID (e.g., "john_doe", "patient123")
-2. Click "Load Patient Data" to fetch progress metrics
-3. View Summary Dashboard:
-   - Metric Cards: Total recordings, avg PER, avg LFR, avg fluency
-   - Clinical Insights: Automated recommendations based on progress
-   - Charts: LFR trend, PER trend, fluency trend, problematic phonemes
-4. Analyze Progress Trends:
-   - Check if LFR is increasing over time (improvement in fluency)
-   - Check if PER is decreasing over time (improvement in pronunciation)
-   - Identify which phonemes need focused practice
-5. Review Recent Sessions:
-   - Scroll to sessions table at bottom
-   - Click any session row to expand details
-   - View full transcript, metrics, phoneme errors, stuttering events
-6. Identify Focus Areas:
-   - Read clinical insights for automated recommendations
-   - Check "Most Problematic Phonemes" chart
-   - Plan next therapy session based on data
-7. Click "Refresh" to update with latest data
-
-Dashboard Features:
-- Real-time data loading from API
-- Interactive charts with tooltips (hover to see details)
-- Color-coded insights (green = positive, yellow = neutral, red = focus)
-- Expandable session details for deep-dive analysis
-- Responsive design works on desktop, tablet, mobile
-
-
-API ENDPOINTS
-================================================================================
-
-POST /session/start
-  - Starts a new session
-  - Returns: session_id, object, prompt_text, expected_answer
-
-POST /session/next-prompt
-  - Gets next prompt for current object
-  - Params: session_id
-  - Returns: prompt_text, expected_answer
-
-POST /session/change-object
-  - Changes to a different object
-  - Params: session_id, new_object (optional)
-  - Returns: new prompt for new object
-
-POST /record
-  - Uploads audio and performs analysis
-  - Params: session_id, object_name, prompt_text, expected_answer, audio (file)
-  - Returns: Complete analysis JSON:
-      * transcript
-      * wer, speech_rate, pause_ratio
-      * semantic_evaluation
-      * phoneme_analysis
-          - per, total_phonemes
-          - errors (detailed list)
-          - problematic_phonemes
-          - clinical_notes
-      * fluency_analysis
-          - longest_fluent_run
-          - fluency_percentage
-          - stuttering_events
-          - pauses
-          - clinical_notes
-      * recording_id (database ID) ⭐⭐⭐ NEW
-
-GET /patient/{patient_id}/history  ⭐⭐⭐ NEW
-  - Get recording history for a patient
-  - Params: patient_id, limit (optional), object_name (optional filter)
-  - Returns: List of all recordings with full analysis results
-
-GET /patient/{patient_id}/progress  ⭐⭐⭐ NEW
-  - Get aggregated progress metrics for a patient
-  - Returns:
-      * total_recordings
-      * avg_fluency, avg_per, avg_wer, avg_lfr
-      * lfr_trend (daily averages over time)
-      * most_problematic_phonemes (ranked by error rate)
-      * object_performance (performance by object)
-
-GET /patient/{patient_id}/phoneme/{phoneme}/trend  ⭐⭐⭐ NEW
-  - Track specific phoneme errors over time
-  - Params: patient_id, phoneme (e.g., 'AA', 'TH')
-  - Returns: List of recordings where phoneme had errors, with dates
-
-GET /session/{session_id}/summary  ⭐⭐⭐ NEW
-  - Get summary of all recordings in a session
-  - Returns:
-      * session_id
-      * total_prompts
-      * object_name
-      * recordings (all recordings in session)
-      * session_averages (avg fluency, PER, LFR)
-
-POST /generate-prompts  ⭐⭐⭐⭐ NEW
-  - Generate speech therapy prompts for any object using LLM
-  - Params: object_name (str), force_regenerate (bool, optional)
-  - Returns:
-      * object: object name
-      * questions: array of question objects with expected_answers
-      * sentences: array of sentence objects with difficulty levels
-      * source: "cache" | "llm" | "fallback"
-      * model: LLM model name (if LLM was used)
-  - Automatically caches results in database for instant reuse
-  - Falls back to template prompts if Ollama unavailable
-
-GET /ollama/status  ⭐⭐⭐⭐ NEW
-  - Check if Ollama LLM service is running
-  - Returns:
-      * available: true/false
-      * message: status description
-
-GET /generated-objects  ⭐⭐⭐⭐ NEW
-  - Get list of all objects with cached prompts
-  - Returns:
-      * objects: array of object names
-      * count: total count
-
-
-DATABASE SCHEMA
-================================================================================
-
-recordings table:
-  - id (PRIMARY KEY)
-  - session_id                              # Groups prompts together
-  - object_name
-  - prompt_text
-  - expected_answer
-  - audio_path
-  - transcript
-
-  # Word-level metrics
-  - wer, speech_rate, pause_ratio
-
-  # Phoneme-level metrics
-  - per, total_phonemes
-  - phoneme_errors_json                     # JSON array of detailed errors
-  - problematic_phonemes_json               # JSON object: {phoneme: count}
-  - clinical_notes_json                     # JSON array of insights
-
-  # Semantic metrics
-  - semantic_classification                 # correct/partial/wrong
-  - semantic_score                          # 0.0 - 1.0
-
-  # Fluency metrics ⭐⭐⭐ NEW
-  - longest_fluent_run                      # Max consecutive fluent words
-  - total_pauses                            # Total pause count
-  - hesitation_count                        # 300ms-1s pauses
-  - block_count                             # >1s pauses
-  - fluency_percentage                      # 0-100%
-  - dysfluencies_per_100_words
-  - dysfluencies_per_minute
-  - speech_rate_variability                 # Coefficient of variation
-  - stuttering_events_json                  # JSON array of stuttering events
-  - pauses_json                             # JSON array of pause details
-  - fluency_notes_json                      # JSON array of clinical notes
-
-  - created_at (TIMESTAMP)
-
-patient_phoneme_history table:              # ⭐⭐⭐ Tracks phoneme errors over time
-  - id (PRIMARY KEY)
-  - patient_id
-  - phoneme                                 # e.g., 'AA', 'TH', 'R'
-  - error_count                             # Total errors for this phoneme
-  - occurrence_count                        # Total times phoneme appeared
-  - last_error_date
-  - created_at
-
-generated_prompts table:                    # ⭐⭐⭐⭐ NEW - Caches LLM-generated prompts
-  - id (PRIMARY KEY)
-  - object_name (UNIQUE)                    # e.g., 'toothbrush', 'umbrella'
-  - prompts_json (TEXT)                     # JSON with questions and sentences
-  - model_name (TEXT)                       # e.g., 'llama3.2:3b' or NULL for fallback
-  - generation_method (TEXT)                # 'llm' or 'fallback'
-  - created_at (TIMESTAMP)
-  - last_used_at (TIMESTAMP)                # LRU tracking
-
-
-CHALLENGES FACED
-================================================================================
-
-1. DATABASE SCHEMA MIGRATION:
-   - Issue: Old database from previous version lacked fluency columns
-   - Impact: Runtime errors when trying to save recordings with new metrics
-   - Solution: Created migration script (migrate_add_fluency_columns.py) and
-     documented two approaches: (1) Delete old database, (2) Run migration
-   - Lesson: SQLite's CREATE TABLE IF NOT EXISTS doesn't alter existing tables
-
-2. SESSION MANAGEMENT SYNCHRONIZATION:
-   - Issue: Client-side was creating custom session IDs with patient prefix
-     and overriding server's UUID-based session IDs
-   - Impact: Server couldn't find sessions in memory, causing 404 errors on
-     /session/next-prompt and /session/change-object endpoints
-   - Root Cause: Client override at recorder.html:126 (json.session_id = sessionId)
-     meant server never stored sessions under the IDs client was requesting
-   - Solution: Modified /session/start endpoint to accept patient_id parameter
-     and generate session ID with patient prefix server-side. Removed client
-     override so both client and server use same session ID.
-   - Lesson: Session management must be centralized on server to maintain state
-
-3. JAVASCRIPT EVENT HANDLER BUG:
-   - Issue: Dashboard load button passed event object instead of patient ID
-   - Impact: API received URL-encoded "[object PointerEvent]" as patient_id
-   - Root Cause: loadButton.addEventListener('click', loadPatientData) passed
-     event object as first parameter to function expecting patient ID
-   - Solution: Changed to arrow function: () => loadPatientData() to call
-     function without parameters (extracts patient ID from input field)
-   - Lesson: Direct function references in event listeners receive event object
-
-4. WHISPER MULTILINGUAL TRANSCRIPTION:
-   - Issue: Whisper transcribing background noise as non-English (Japanese/Chinese)
-   - Impact: Gibberish transcripts like "素っ、素っ…フォー" appearing in results
-   - Root Cause: Whisper's multilingual model trying to interpret unclear audio
-     as speech from other languages without language constraints
-   - Solution: Added language="en" parameter to force English-only transcription,
-     enabled VAD filtering (vad_filter=True) with 500ms silence threshold to
-     better filter out background noise and silence
-   - Lesson: Always constrain language model when target language is known
+5. Open frontend:
+   http://localhost:8000 (Patient Interface)
+   http://localhost:8000/dashboard (Therapist Dashboard)
 
 
 KNOWN LIMITATIONS & FUTURE WORK
@@ -748,78 +555,18 @@ KNOWN LIMITATIONS & FUTURE WORK
 
 CURRENT LIMITATIONS:
 
-1. No user authentication or patient management
-2. Session storage is in-memory (cleared on server restart)
-3. Gentle forced alignment is optional (works without it)
-4. CMU Dict doesn't include all words (handles gracefully)
-5. No GOP (Goodness of Pronunciation) scores yet
+1. No user authentication
+2. Session storage is in-memory
+3. SONIVA Whisper model not bundled (optional download)
+4. espeak-ng required for ML phoneme analysis
 
 FUTURE ENHANCEMENTS:
 
-1. Implement database saving in routers/analysis.py
-2. Add patient account management
-3. Create therapist dashboard for progress tracking
-4. Implement GOP scoring for pronunciation quality
-5. Add more sophisticated VAD (Voice Activity Detection)
-6. Support for additional languages
-7. Real-time feedback during recording
-8. Mobile app version
-9. IRB compliance features (consent, anonymization)
-10. Export to HIPAA-compliant formats
-
-
-VALIDATION & TESTING
-================================================================================
-
-UNIT TESTS:
-✓ Phoneme lookup (CMU Dict)
-✓ PER calculation
-✓ Phoneme alignment algorithm
-✓ Error type classification
-✓ Word extraction from segments
-✓ Pause detection (hesitation, block)
-✓ Stuttering detection (repetitions, interjections)
-✓ LFR calculation with dysfluencies
-✓ Database persistence (save_recording) ⭐⭐⭐ NEW
-✓ Patient history queries ⭐⭐⭐ NEW
-✓ Progress tracking aggregations ⭐⭐⭐ NEW
-✓ Session summaries ⭐⭐⭐ NEW
-✓ Phoneme trend tracking ⭐⭐⭐ NEW
-
-INTEGRATION TESTING:
-(To be implemented)
-- End-to-end workflow testing
-- API endpoint testing with real audio
-
-CLINICAL VALIDATION:
-(Future work for publication)
-- Inter-rater reliability with SLPs
-- Comparison with gold-standard assessments
-- Validation on aphasia patient data
-
-
-ETHICAL CONSIDERATIONS
-================================================================================
-
-1. DATA PRIVACY:
-   - Audio files stored locally
-   - No cloud transmission by default
-   - Database not encrypted (implement for production)
-
-2. CLINICAL USE:
-   - System is research-grade, not FDA-approved
-   - Should supplement, not replace, SLP assessment
-   - Requires informed consent for research use
-
-3. IRB APPROVAL:
-   - Required before patient data collection
-   - Include data management plan
-   - Obtain consent for audio recording
-
-4. BIAS & FAIRNESS:
-   - CMU Dict is primarily American English
-   - May not accurately represent all dialects
-   - Whisper model trained on diverse data
+1. Real-time pronunciation feedback
+2. Mobile app version
+3. Multi-language support
+4. HIPAA-compliant deployment
+5. Integration with EHR systems
 
 
 CITATION
@@ -827,37 +574,29 @@ CITATION
 
 If you use this system in your research, please cite:
 
-[Your Name et al.] (2025). AI-Powered Speech Therapy Homework System with
-Phoneme-Level Analysis for Aphasia Assessment. [Journal Name]. [DOI]
+[Your Name et al.] (2026). AI-Powered Speech Therapy System with
+ML-Based Phoneme Analysis for Aphasia Assessment. [Journal Name].
 
 
 ACKNOWLEDGMENTS
 ================================================================================
 
-This system uses the following open-source tools and datasets:
+This system uses the following open-source tools:
 
-- CMU Pronouncing Dictionary (CMU Sphinx)
-- Faster-Whisper (OpenAI Whisper optimized)
-- Ollama (local LLM runtime)
-- Llama 3.2 (Meta AI)
-- Gentle Forced Aligner (lowerquality/gentle)
+- Wav2Vec2 (Facebook AI Research)
+- Silero VAD (silero-team)
+- Faster-Whisper (SYSTRAN)
 - Sentence Transformers (UKPLab)
-- FastAPI framework
-- Chart.js (data visualization)
+- CMU Pronouncing Dictionary
+- phonemizer + espeak-ng
+- Ollama (local LLM runtime)
+- FastAPI, Chart.js
 
 
-CONTACT & SUPPORT
-================================================================================
-
-For questions, bug reports, or collaboration inquiries:
-- GitHub Issues: [repository URL]
-- Email: [your email]
-
-Last Updated: January 2, 2026
-Version: 3.0.0
-Status: Research MVP with Unlimited Object Support
-Features: Phoneme + Fluency Analysis | Database Persistence | LLM-Powered Prompts
-
+Last Updated: January 13, 2026
+Version: 4.0.0
+Status: Research MVP with ML-Powered Analysis
+Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | Database Persistence
 
 ================================================================================
                           END OF DOCUMENTATION

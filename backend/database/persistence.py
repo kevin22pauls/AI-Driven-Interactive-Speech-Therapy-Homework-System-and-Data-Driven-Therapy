@@ -76,6 +76,28 @@ def save_recording(
         if phoneme_analysis.get("clinical_notes"):
             clinical_notes_json = json.dumps(phoneme_analysis["clinical_notes"])
 
+        # Extract ML phoneme analysis
+        ml_analysis = phoneme_analysis.get("ml_analysis", {})
+        ml_per = ml_analysis.get("per_ml")
+        ml_gop = ml_analysis.get("overall_gop")
+        ml_confidence = ml_analysis.get("model_confidence")
+
+        ml_detected_phonemes_json = None
+        if ml_analysis.get("detected_phonemes"):
+            ml_detected_phonemes_json = json.dumps(ml_analysis["detected_phonemes"])
+
+        ml_detected_ipa_json = None
+        if ml_analysis.get("detected_phonemes_ipa"):
+            ml_detected_ipa_json = json.dumps(ml_analysis["detected_phonemes_ipa"])
+
+        ml_alignment_json = None
+        if ml_analysis.get("alignment"):
+            ml_alignment_json = json.dumps(ml_analysis["alignment"])
+
+        ml_phoneme_scores_json = None
+        if ml_analysis.get("phoneme_scores"):
+            ml_phoneme_scores_json = json.dumps(ml_analysis["phoneme_scores"])
+
         # Extract fluency analysis
         fluency_analysis = analysis_result.get("fluency_analysis", {})
         longest_fluent_run = fluency_analysis.get("longest_fluent_run")
@@ -106,6 +128,8 @@ def save_recording(
                 session_id, object_name, prompt_text, expected_answer, audio_path,
                 transcript, wer, speech_rate, pause_ratio,
                 per, total_phonemes, phoneme_errors_json, problematic_phonemes_json, clinical_notes_json,
+                ml_per, ml_gop, ml_confidence, ml_detected_phonemes_json, ml_detected_ipa_json,
+                ml_alignment_json, ml_phoneme_scores_json,
                 semantic_classification, semantic_score,
                 longest_fluent_run, total_pauses, hesitation_count, block_count,
                 fluency_percentage, dysfluencies_per_100_words, dysfluencies_per_minute,
@@ -115,6 +139,8 @@ def save_recording(
                 :session_id, :object_name, :prompt_text, :expected_answer, :audio_path,
                 :transcript, :wer, :speech_rate, :pause_ratio,
                 :per, :total_phonemes, :phoneme_errors_json, :problematic_phonemes_json, :clinical_notes_json,
+                :ml_per, :ml_gop, :ml_confidence, :ml_detected_phonemes_json, :ml_detected_ipa_json,
+                :ml_alignment_json, :ml_phoneme_scores_json,
                 :semantic_classification, :semantic_score,
                 :longest_fluent_run, :total_pauses, :hesitation_count, :block_count,
                 :fluency_percentage, :dysfluencies_per_100_words, :dysfluencies_per_minute,
@@ -138,6 +164,13 @@ def save_recording(
             "phoneme_errors_json": phoneme_errors_json,
             "problematic_phonemes_json": problematic_phonemes_json,
             "clinical_notes_json": clinical_notes_json,
+            "ml_per": ml_per,
+            "ml_gop": ml_gop,
+            "ml_confidence": ml_confidence,
+            "ml_detected_phonemes_json": ml_detected_phonemes_json,
+            "ml_detected_ipa_json": ml_detected_ipa_json,
+            "ml_alignment_json": ml_alignment_json,
+            "ml_phoneme_scores_json": ml_phoneme_scores_json,
             "semantic_classification": semantic_classification,
             "semantic_score": semantic_score,
             "longest_fluent_run": longest_fluent_run,
@@ -286,6 +319,16 @@ def get_patient_history(
                 recording["pauses"] = json.loads(recording["pauses_json"])
             if recording.get("fluency_notes_json"):
                 recording["fluency_notes"] = json.loads(recording["fluency_notes_json"])
+
+            # Parse ML phoneme analysis JSON fields
+            if recording.get("ml_detected_phonemes_json"):
+                recording["ml_detected_phonemes"] = json.loads(recording["ml_detected_phonemes_json"])
+            if recording.get("ml_detected_ipa_json"):
+                recording["ml_detected_ipa"] = json.loads(recording["ml_detected_ipa_json"])
+            if recording.get("ml_alignment_json"):
+                recording["ml_alignment"] = json.loads(recording["ml_alignment_json"])
+            if recording.get("ml_phoneme_scores_json"):
+                recording["ml_phoneme_scores"] = json.loads(recording["ml_phoneme_scores_json"])
 
             recordings.append(recording)
 

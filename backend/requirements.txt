@@ -1,17 +1,55 @@
+# Web Framework
 fastapi
 uvicorn
-sqlalchemy
 python-multipart
 pydantic
+
+# Database
+sqlalchemy
+
+# Speech Recognition
 faster-whisper
+
+# Core ML/Audio
 torch
+torchaudio
 numpy
 scipy
-noisereduce
-silero-vad
-jiwer
-sentence-transformers
 soundfile
+noisereduce
+
+# VAD (Voice Activity Detection)
+silero-vad
+
+# Text Metrics
+jiwer
 editdistance
-requests
+
+# Semantic Analysis
+sentence-transformers
+
+# NLP
+nltk
 scikit-learn
+
+# HTTP
+requests
+
+# ============================================================================
+# ML Model Dependencies (for enhanced analysis)
+# ============================================================================
+
+# HuggingFace Hub for model downloads
+huggingface_hub>=0.20.0
+
+# Transformers for WavLM/Wav2Vec2 phoneme analysis
+transformers>=4.35.0
+
+# Audio processing for prosody analysis
+librosa>=0.10.0
+
+# Audio format conversion (webm -> wav)
+pydub>=0.25.0
+
+# ONNX Runtime for optimized inference (optional, for Silero VAD ONNX)
+# onnxruntime>=1.16.0

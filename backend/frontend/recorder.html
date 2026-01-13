@@ -549,27 +549,66 @@ function displayResults(data) {
     html += `</div>`;
   }
 
-  // Display fluency analysis if present
+  // Display fluency analysis if present (handles both standard and enhanced formats)
   if (data.fluency_analysis && !data.fluency_analysis.error) {
     const fluency = data.fluency_analysis;
     html += `<div style="margin-top: 15px; padding: 10px; background-color: #f0f8ff; border-radius: 6px;">`;
     html += `<h4>Fluency & Stuttering Analysis</h4>`;
 
-    // Key metrics
-    html += `<div><strong>Longest Fluent Run:</strong> ${fluency.longest_fluent_run} words</div>`;
-    html += `<div><strong>Fluency Percentage:</strong> ${fluency.fluency_percentage.toFixed(1)}%</div>`;
-    html += `<div><strong>Dysfluencies per 100 words:</strong> ${fluency.dysfluencies_per_100_words.toFixed(1)}</div>`;
-    html += `<div><strong>Dysfluencies per minute:</strong> ${fluency.dysfluencies_per_minute.toFixed(1)}</div>`;
+    // Key metrics - handle both old and new format
+    html += `<div><strong>Longest Fluent Run:</strong> ${fluency.longest_fluent_run || 0} words</div>`;
 
-    // Pause breakdown
-    if (fluency.total_pauses > 0) {
-      html += `<div style="margin-top: 8px;"><strong>Pauses Detected:</strong> ${fluency.total_pauses}`;
-      html += ` (${fluency.hesitation_count} hesitations, ${fluency.block_count} blocks)</div>`;
+    // Check for enhanced format (fluency_scores object) vs standard format
+    if (fluency.fluency_scores) {
+      // Enhanced format
+      html += `<div><strong>Weighted Fluency:</strong> ${(fluency.fluency_scores.weighted_fluency_pct || 0).toFixed(1)}%</div>`;
+      html += `<div><strong>Clinical Fluency:</strong> ${(fluency.fluency_scores.clinical_fluency_pct || 0).toFixed(1)}%</div>`;
+    } else if (fluency.fluency_percentage !== undefined) {
+      // Standard format
+      html += `<div><strong>Fluency Percentage:</strong> ${fluency.fluency_percentage.toFixed(1)}%</div>`;
+      if (fluency.dysfluencies_per_100_words !== undefined) {
+        html += `<div><strong>Dysfluencies per 100 words:</strong> ${fluency.dysfluencies_per_100_words.toFixed(1)}</div>`;
+      }
+      if (fluency.dysfluencies_per_minute !== undefined) {
+        html += `<div><strong>Dysfluencies per minute:</strong> ${fluency.dysfluencies_per_minute.toFixed(1)}</div>`;
+      }
+    }
+
+    // Speech rate metrics (enhanced format)
+    if (fluency.speech_rate_metrics) {
+      const sr = fluency.speech_rate_metrics;
+      html += `<div style="margin-top: 8px;"><strong>Speech Rate:</strong> ${sr.speaking_rate || 0} syl/min</div>`;
+      html += `<div><strong>Articulation Rate:</strong> ${sr.articulation_rate || 0} syl/min</div>`;
+      if (sr.normative_comparison) {
+        html += `<div><em>${sr.normative_comparison}</em></div>`;
+      }
+    }
+
+    // SSI-4 Stuttering Severity (enhanced format)
+    if (fluency.ssi_approximation && fluency.ssi_approximation.severity !== 'normal') {
+      const ssi = fluency.ssi_approximation;
+      html += `<div style="margin-top: 8px; padding: 6px; background: #ffebee; border-radius: 4px;">`;
+      html += `<strong>Stuttering Severity (SSI-4):</strong> ${ssi.severity.replace('_', ' ')} (score: ${ssi.total_score})`;
+      html += `</div>`;
+    }
+
+    // Pause breakdown - handle both formats
+    const pauseMetrics = fluency.pause_metrics || {};
+    const totalPauses = pauseMetrics.total_pauses || fluency.total_pauses || 0;
+    if (totalPauses > 0) {
+      const hesitations = pauseMetrics.hesitation_count || fluency.hesitation_count || 0;
+      const blocks = pauseMetrics.block_count || fluency.block_count || 0;
+      const anomic = pauseMetrics.anomic_count || 0;
+      html += `<div style="margin-top: 8px;"><strong>Pauses Detected:</strong> ${totalPauses}`;
+      if (hesitations > 0) html += ` (${hesitations} hesitations`;
+      if (anomic > 0) html += `, ${anomic} word-finding`;
+      if (blocks > 0) html += `, ${blocks} blocks`;
+      html += `)</div>`;
     }
 
     // Stuttering events summary
     if (fluency.stuttering_events && fluency.stuttering_events.length > 0) {
-      const repetitions = fluency.stuttering_events.filter(e => e.type === 'repetition').length;
+      const repetitions = fluency.stuttering_events.filter(e => e.type === 'repetition' || e.type === 'whole_word_repetition').length;
       const interjections = fluency.stuttering_events.filter(e => e.type === 'interjection').length;
       const prolongations = fluency.stuttering_events.filter(e => e.type === 'prolongation').length;
 
@@ -600,15 +639,18 @@ function displayResults(data) {
       fluency.stuttering_events.forEach(event => {
         const typeColor = {
           'repetition': '#ff9800',
+          'whole_word_repetition': '#ff9800',
           'interjection': '#9c27b0',
           'prolongation': '#f44336'
         }[event.type] || '#333';
 
         let details = '';
-        if (event.type === 'repetition') {
-          details = `Repeated ${event.repetition_count}x`;
+        if (event.type === 'repetition' || event.type === 'whole_word_repetition') {
+          details = `Repeated ${event.repetition_count || 2}x`;
         } else if (event.type === 'prolongation' && event.duration) {
           details = `Duration: ${event.duration.toFixed(2)}s`;
+        } else if (event.clinical_significance) {
+          details = event.clinical_significance;
         }
 
         html += `<tr style="border-bottom: 1px solid #ddd;">`;

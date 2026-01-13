@@ -40,8 +40,14 @@ backend/models/*.pt
 backend/models/*.pth
 backend/models/*.bin
 backend/models/whisper-*
+backend/models/cache/
+backend/models/soniva-*
 *.ckpt
 *.safetensors
+
+# Large binary files
+*.zip
+nul
 
 # Database files
 *.db

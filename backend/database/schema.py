@@ -14,12 +14,13 @@ def create_tables_from_sqlfile():
     if os.path.exists(SQL_FILE):
         with open(SQL_FILE, "r", encoding="utf-8") as f:
             sql = f.read()
-        with engine.connect() as conn:
-            for stmt in sql.split(";"):
-                stmt = stmt.strip()
-                if stmt:
-                    conn.execute(text(stmt))
-            conn.commit()
+        # Use raw connection with executescript for multi-statement SQL
+        raw_conn = engine.raw_connection()
+        try:
+            raw_conn.executescript(sql)
+            raw_conn.commit()
+        finally:
+            raw_conn.close()
     else:
         # Fallback minimal table
         fallback_sql = """
