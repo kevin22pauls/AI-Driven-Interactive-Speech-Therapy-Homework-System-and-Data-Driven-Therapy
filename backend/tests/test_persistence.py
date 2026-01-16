@@ -96,7 +96,7 @@ class TestSaveRecording:
             "speech_rate": 3.0,
             "pause_ratio": 0.15,
             "phoneme_analysis": {
-                "per": 0.125,
+                "per_rule": 0.125,
                 "total_phonemes": 8,
                 "errors": [
                     {
@@ -221,7 +221,7 @@ class TestSaveRecording:
         analysis_result = {
             "transcript": "bottle",
             "phoneme_analysis": {
-                "per": 0.1,
+                "per_rule": 0.1,
                 "total_phonemes": 10,
                 "problematic_phonemes": {
                     "AA": 2,
@@ -352,7 +352,7 @@ class TestPatientProgress:
                     "total_pauses": 2
                 },
                 "phoneme_analysis": {
-                    "per": 0.05 * (i + 1),  # 0.05, 0.10, 0.15
+                    "per_rule": 0.05 * (i + 1),  # 0.05, 0.10, 0.15
                     "total_phonemes": 10
                 }
             }
@@ -381,7 +381,7 @@ class TestPatientProgress:
         analysis_result = {
             "transcript": "test",
             "phoneme_analysis": {
-                "per": 0.2,
+                "per_rule": 0.2,
                 "total_phonemes": 10,
                 "problematic_phonemes": {
                     "AA": 5,
@@ -428,7 +428,7 @@ class TestSessionSummary:
                     "fluency_percentage": 85.0
                 },
                 "phoneme_analysis": {
-                    "per": 0.1
+                    "per_rule": 0.1
                 }
             }
         )
@@ -452,7 +452,7 @@ class TestSessionSummary:
                     "fluency_percentage": 80.0 + i * 10
                 },
                 "phoneme_analysis": {
-                    "per": 0.1 + i * 0.05
+                    "per_rule": 0.1 + i * 0.05
                 }
             }
 
@@ -491,7 +491,7 @@ class TestPhonemeTrends:
             analysis_result = {
                 "transcript": "bottle",
                 "phoneme_analysis": {
-                    "per": 0.1,
+                    "per_rule": 0.1,
                     "problematic_phonemes": {
                         "AA": i + 1  # Increasing errors
                     }

@@ -401,7 +401,7 @@ def format_phoneme_result_for_api(result: PhonemeAnalysisResult) -> Dict:
         Dictionary suitable for JSON serialization
     """
     return {
-        "per": round(result.per, 3),
+        "per_rule": round(result.per, 3),
         "total_phonemes": result.total_phonemes,
         "error_count": len(result.errors),
         "error_summary": result.error_summary,

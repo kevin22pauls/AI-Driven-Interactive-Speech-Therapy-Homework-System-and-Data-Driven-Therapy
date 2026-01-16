@@ -79,7 +79,7 @@ class MultiAttemptResult:
 class EnhancedPhonemeAnalysisResult:
     """Complete enhanced phoneme analysis result."""
     # Standard metrics
-    per: float  # Standard Phoneme Error Rate
+    per_rule: float  # Rule-based Phoneme Error Rate (from CMUdict comparison)
     wper: float  # Weighted Phoneme Error Rate
     total_phonemes: int
 
@@ -590,10 +590,16 @@ def generate_enhanced_clinical_notes(
     else:
         notes.append("Severe phoneme errors - substantial phonological impairment")
 
-    # Compare WPER to PER for insights
-    if per > 0 and wper < per * 0.7:
+    # Compare WPER to PER for insights (only valid for substitution errors)
+    # Note: This comparison is only meaningful when errors are substitutions, not deletions
+    similar_ratio = pattern_analysis.get('phonetically_similar_ratio', 0)
+    dominant = pattern_analysis.get('dominant_error_type', '')
+
+    # Only make phonetic similarity claims based on actual ratio, not WPER/PER comparison
+    # The WPER/PER comparison can be misleading with deletions (all deletions have weight 0.4)
+    if similar_ratio > 0.5 and 'substitution' in dominant:
         notes.append("Most errors are phonetically similar - phonological system partially preserved")
-    elif per > 0 and wper > per * 1.2:
+    elif similar_ratio < 0.3 and 'substitution' in dominant and len(errors) > 2:
         notes.append("Errors tend to be phonetically dissimilar - more severe phonological disruption")
 
     # Error type insights
@@ -608,12 +614,9 @@ def generate_enhanced_clinical_notes(
         elif dominant == 'metathesis':
             notes.append("Sequencing errors (metathesis) detected - motor programming difficulty")
 
-    # Phonetic similarity insights
-    similar_ratio = pattern_analysis.get('phonetically_similar_ratio', 0)
-    if similar_ratio > 0.7:
+    # Phonetic similarity insights (additional detail if substitutions are dominant)
+    if similar_ratio > 0.7 and 'substitution' in dominant:
         notes.append("High proportion of phonetically similar errors - good phonological awareness")
-    elif similar_ratio < 0.3 and len(errors) > 2:
-        notes.append("Low phonetic similarity in errors - phonological selection impaired")
 
     # Common substitution patterns
     common_subs = pattern_analysis.get('common_substitutions', [])
@@ -648,7 +651,8 @@ def generate_enhanced_clinical_notes(
 def analyze_phonemes_enhanced(
     expected_text: str,
     actual_text: str,
-    word_timings: Optional[List[Dict]] = None
+    word_timings: Optional[List[Dict]] = None,
+    ml_detected_phonemes: Optional[List[str]] = None
 ) -> EnhancedPhonemeAnalysisResult:
     """
     Perform enhanced phoneme-level analysis with clinical weighting.
@@ -660,15 +664,18 @@ def analyze_phonemes_enhanced(
         expected_text: Expected text (prompt or answer)
         actual_text: Actual transcribed text
         word_timings: Optional word-level timing information
+        ml_detected_phonemes: Optional ML-detected phonemes from Wav2Vec2 (ARPAbet).
+                              If provided, these are used as the actual phonemes instead
+                              of CMUdict lookup on transcript. This provides more accurate
+                              phoneme analysis when acoustic detection is available.
 
     Returns:
         EnhancedPhonemeAnalysisResult with complete analysis
     """
     phoneme_dict = get_phoneme_dict()
 
-    # Convert texts to phonemes
+    # Convert expected text to phonemes (always use CMUdict for expected)
     expected_words_phonemes = phoneme_dict.text_to_phonemes(expected_text)
-    actual_words_phonemes = phoneme_dict.text_to_phonemes(actual_text)
 
     # Flatten to get full phoneme sequences
     expected_phonemes = []
@@ -676,10 +683,20 @@ def analyze_phonemes_enhanced(
         if phonemes:
             expected_phonemes.extend(phonemes)
 
-    actual_phonemes = []
-    for word, phonemes in actual_words_phonemes:
-        if phonemes:
-            actual_phonemes.extend(phonemes)
+    # For actual phonemes: use ML-detected if available, otherwise fall back to CMUdict
+    if ml_detected_phonemes:
+        # Use ML-detected phonemes (acoustic ground truth)
+        actual_phonemes = ml_detected_phonemes
+        # Create dummy word-phoneme mapping for error attribution
+        actual_words_phonemes = [("(ml-detected)", ml_detected_phonemes)]
+        logger.info(f"Using {len(ml_detected_phonemes)} ML-detected phonemes for analysis")
+    else:
+        # Fall back to CMUdict lookup (text-based)
+        actual_words_phonemes = phoneme_dict.text_to_phonemes(actual_text)
+        actual_phonemes = []
+        for word, phonemes in actual_words_phonemes:
+            if phonemes:
+                actual_phonemes.extend(phonemes)
 
     # Calculate standard PER
     if expected_phonemes:
@@ -761,7 +778,7 @@ def analyze_phonemes_enhanced(
     )
 
     return EnhancedPhonemeAnalysisResult(
-        per=per,
+        per_rule=per,
         wper=wper,
         total_phonemes=len(expected_phonemes),
         errors=errors,
@@ -795,7 +812,7 @@ def format_enhanced_phoneme_result_for_api(result: EnhancedPhonemeAnalysisResult
         }
 
     return {
-        "per": round(result.per, 3),
+        "per_rule": round(result.per_rule, 3),
         "wper": round(result.wper, 3),
         "total_phonemes": result.total_phonemes,
         "error_count": len(result.errors),

@@ -60,7 +60,8 @@ def save_recording(
 
         # Extract phoneme analysis
         phoneme_analysis = analysis_result.get("phoneme_analysis", {})
-        per = phoneme_analysis.get("per")
+        # Support both old "per" and new "per_rule" field names
+        per = phoneme_analysis.get("per_rule") or phoneme_analysis.get("per")
         total_phonemes = phoneme_analysis.get("total_phonemes")
 
         # Convert phoneme errors to JSON

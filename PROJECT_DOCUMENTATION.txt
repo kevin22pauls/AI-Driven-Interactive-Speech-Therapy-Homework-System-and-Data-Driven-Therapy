@@ -18,7 +18,397 @@ phoneme analysis, replacing basic text-based algorithms with state-of-the-art
 deep learning models (Wav2Vec2, Silero VAD, Sentence Transformers).
 
 
-SYSTEM ARCHITECTURE
+================================================================================
+                    HOW THE SYSTEM WORKS - DETAILED FLOW
+================================================================================
+
+STEP 1: PATIENT RECORDING SESSION
+--------------------------------------------------------------------------------
+When a patient starts a session:
+
+1. Patient opens the web interface (http://localhost:8000)
+2. Optionally enters their Patient ID for longitudinal tracking
+3. Selects an object to practice (e.g., "bag", "cup", "phone")
+   - Objects can be predefined or custom (LLM generates prompts for any object)
+4. System displays a prompt question (e.g., "What do you carry things in?")
+5. Patient clicks "Record" and speaks their answer
+6. Browser captures audio using MediaRecorder API (WebM format)
+7. Client-side VAD detects 900ms of silence → auto-stops recording
+8. Audio blob is sent to backend via POST /record
+
+
+STEP 2: AUDIO PREPROCESSING
+--------------------------------------------------------------------------------
+Backend receives audio and prepares it for analysis:
+
+1. AUDIO CONVERSION (utils/audio_converter.py)
+   - Input: WebM blob from browser
+   - PyAV (bundled FFmpeg) converts to WAV format
+   - Resamples to 16kHz mono (required by ML models)
+   - Saves to storage/audio/{session_id}_{timestamp}.wav
+
+2. NOISE REDUCTION (optional)
+   - noisereduce library for spectral gating
+   - Reduces background noise while preserving speech
+
+
+STEP 3: AUTOMATIC SPEECH RECOGNITION (ASR)
+--------------------------------------------------------------------------------
+Whisper model transcribes speech to text:
+
+1. MODEL LOADING (models/whisper_model.py)
+   - Uses faster-whisper for CPU-optimized inference
+   - Model: whisper-small (or medium for better accuracy)
+   - INT8 quantization for faster CPU inference
+
+2. TRANSCRIPTION PROCESS
+   - Audio → Whisper → Transcript + Word-level timestamps
+   - Forces English language (prevents false language detection)
+   - Returns: {
+       "text": "I use the back",
+       "segments": [...],
+       "word_timings": [
+         {"word": "I", "start": 0.0, "end": 0.2},
+         {"word": "use", "start": 0.3, "end": 0.5},
+         ...
+       ]
+     }
+
+3. WORD ERROR RATE (WER) CALCULATION
+   - Compares transcript to expected answer using jiwer
+   - WER = (Substitutions + Deletions + Insertions) / Total Words
+   - Example: Expected "I use the bag", Got "I use the back"
+     WER = 1/4 = 0.25 (25% error rate)
+
+
+STEP 4: ML-BASED PHONEME ANALYSIS (Wav2Vec2)
+--------------------------------------------------------------------------------
+Analyzes pronunciation at the acoustic level:
+
+1. MODEL: facebook/wav2vec2-lv-60-espeak-cv-ft
+   - Trained on 60,000 hours of speech
+   - Fine-tuned for phoneme recognition
+   - Outputs IPA (International Phonetic Alphabet) symbols
+
+2. ACOUSTIC PHONEME DETECTION PROCESS
+   a) Load audio waveform (16kHz)
+   b) Extract features using Wav2Vec2FeatureExtractor
+   c) Pass through Wav2Vec2ForCTC model
+   d) Get frame-level logits (probabilities for each phoneme)
+   e) CTC decode to get phoneme sequence
+
+   Example:
+   Audio of "bag" → Model → [b, æ, ɡ] (IPA)
+
+3. IPA TO ARPABET CONVERSION (phoneme_mapping.py)
+   - Wav2Vec2 outputs IPA, CMUdict uses ARPAbet
+   - Converts for consistent comparison
+
+   IPA:     [b, æ, ɡ]
+   ARPAbet: [B, AE, G]
+
+4. GOODNESS OF PRONUNCIATION (GOP) SCORING
+   - Measures how well each phoneme was pronounced
+   - GOP = log P(phoneme | audio features)
+
+   Calculation:
+   a) Get softmax probabilities from model output
+   b) For each phoneme, find frames where it was detected
+   c) Average the max probabilities for those frames
+   d) Take log to get GOP score
+
+   Interpretation:
+   - GOP ≈ 0: Good pronunciation (high confidence)
+   - GOP << -2: Poor pronunciation (low confidence)
+
+5. ML-BASED PHONEME ERROR RATE (PER_ML)
+   - Aligns expected phonemes (from CMUdict) with detected phonemes
+   - Uses dynamic programming (Needleman-Wunsch algorithm)
+   - Counts substitutions, insertions, deletions
+
+   Example:
+   Expected: [DH, AH, B, AE, G]  ("the bag")
+   Detected: [DH, AH, B, AE, K]  (detected from audio)
+   Alignment: [(DH,DH), (AH,AH), (B,B), (AE,AE), (G,K)]
+   PER_ML = 1/5 = 0.20 (one substitution: G→K)
+
+
+STEP 5: RULE-BASED PHONEME ANALYSIS (Enhanced)
+--------------------------------------------------------------------------------
+Text-based analysis using linguistic rules:
+
+1. CMU PRONOUNCING DICTIONARY LOOKUP
+   - 134,000+ English words with phoneme transcriptions
+   - Looks up expected and actual words
+
+   "bag" → [B, AE1, G]
+   "back" → [B, AE1, K]
+
+2. PHONEME ALIGNMENT & ERROR DETECTION
+   - Aligns expected vs actual phoneme sequences
+   - Classifies each error by type:
+
+   ERROR TYPES:
+   - Substitution (phonetically similar): d→0.3 weight
+     Example: [G] → [K] (both are velar stops)
+   - Substitution (phonetically dissimilar): d→0.7 weight
+     Example: [S] → [M] (fricative vs nasal)
+   - Deletion (unstressed): 0.4 weight
+   - Deletion (stressed): 0.8 weight
+   - Insertion: 0.6 weight
+   - Metathesis (transposition): 0.5 weight
+
+3. WEIGHTED PHONEME ERROR RATE (WPER)
+   - Unlike simple PER, weights errors by clinical significance
+   - WPER = Sum(error_weights) / Total_phonemes
+
+   Example: "bag" → "back"
+   - G→K substitution, phonetically similar (both velars)
+   - Weight = 0.3
+   - WPER = 0.3/3 = 0.10 (vs PER = 0.33)
+
+4. PHONETIC DISTANCE CALCULATION
+   Based on articulatory features:
+
+   CONSONANT FEATURES:
+   - Voicing: voiced vs voiceless (15% weight)
+   - Place: bilabial, alveolar, velar, etc. (25% weight)
+   - Manner: stop, fricative, nasal, etc. (30% weight)
+
+   VOWEL FEATURES:
+   - Height: high, mid, low (15% weight)
+   - Backness: front, central, back (15% weight)
+
+   Example: [G] vs [K]
+   - Same place (velar): 0
+   - Same manner (stop): 0
+   - Different voicing: 0.15
+   - Distance = 0.15 (very similar)
+
+5. CONDUITE D'APPROCHE DETECTION
+   - Pattern where patient makes multiple attempts, getting closer
+   - Example: "b...buh...ba...bag"
+   - Detected by analyzing word timing segments
+   - Indicates preserved phonological processing
+
+
+STEP 6: SEMANTIC ANALYSIS
+--------------------------------------------------------------------------------
+Evaluates meaning and word-finding:
+
+1. SENTENCE SIMILARITY (Sentence Transformers)
+   - Model: all-MiniLM-L6-v2
+   - Encodes expected and actual sentences to vectors
+   - Calculates cosine similarity
+
+   Example:
+   Expected: "I use the bag"
+   Actual: "I use the back"
+   Similarity: 0.85 (high, mostly correct)
+
+2. CLASSIFICATION TIERS
+   Based on similarity score:
+   - CORRECT: similarity > 0.85
+   - PARTIAL: 0.5 < similarity < 0.85
+   - WRONG: similarity < 0.5
+   - CIRCUMLOCUTION: Low similarity but describes object
+   - SEMANTIC_PARAPHASIA: Related word substitution
+
+3. SEMANTIC PARAPHASIA DETECTION
+   - Identifies when patient substitutes a related word
+   - Uses position-based matching:
+
+   Expected: "I use the bag"
+   Actual:   "I use the back"
+
+   Process:
+   a) Find target word position in expected ("bag" at position 3)
+   b) Get word at same position in actual ("back" at position 3)
+   c) Compare "bag" vs "back"
+   d) Check if phonetically similar → Phonological paraphasia
+   e) Check if semantically related → Semantic paraphasia
+
+   Types:
+   - PHONOLOGICAL: Sound-alike substitution (bag→back)
+   - SEMANTIC: Category-related (bag→purse, dog→cat)
+   - UNRELATED: No clear relationship
+
+4. CIRCUMLOCUTION DETECTION
+   - Identifies descriptive workarounds
+   - Example: "the thing you carry stuff in" for "bag"
+   - Uses feature matching and object descriptions
+   - Common in anomic aphasia
+
+
+STEP 7: FLUENCY ANALYSIS (ML-Based)
+--------------------------------------------------------------------------------
+Analyzes speech flow and dysfluencies:
+
+1. SILERO VAD (Voice Activity Detection)
+   - Model: snakers4/silero-vad
+   - Detects speech vs silence with high precision
+   - Returns speech probability per frame
+
+   Process:
+   a) Run VAD on entire audio
+   b) Get speech segments: [(0.0, 0.5), (0.8, 1.2), ...]
+   c) Calculate gaps between segments (pauses)
+
+2. PAUSE CLASSIFICATION
+   By duration:
+   - HESITATION: 300ms - 1000ms (word-finding delay)
+   - BLOCK: > 1000ms (motor planning difficulty)
+
+   By context:
+   - ANOMIC PAUSE: Before content word (noun, verb)
+   - APRAXIC PAUSE: Multiple short pauses (motor planning)
+   - FORMULATION PAUSE: Before complex phrase
+
+   Example Analysis:
+   "I want... [800ms pause] ...the bag"
+   → Hesitation pause, likely anomic (before noun "bag")
+
+3. STUTTERING DETECTION
+   Identifies dysfluency patterns:
+
+   - REPETITION: "b-b-b-bag" (sound/syllable repeat)
+   - PROLONGATION: "sssssnake" (sound stretching)
+   - BLOCK: "[silence]...bag" (inability to initiate)
+   - INTERJECTION: "um", "uh", "like"
+
+4. SPEECH RATE METRICS
+   - Articulation Rate: syllables/second (excluding pauses)
+   - Speaking Rate: syllables/second (including pauses)
+   - Pause Ratio: pause_time / total_time
+
+   Normal ranges:
+   - Articulation rate: 4-6 syllables/second
+   - Speaking rate: 2-4 syllables/second
+
+5. LONGEST FLUENT RUN (LFR)
+   - Maximum words spoken without dysfluency
+   - Key metric for fluency disorders
+   - LFR with tolerance allows minor hesitations
+
+6. SSI-4 APPROXIMATION (Stuttering Severity Instrument)
+   Calculates severity score:
+
+   Components:
+   - Frequency: % of syllables with stuttering
+   - Duration: Average stutter duration in seconds
+
+   Scoring:
+   - Frequency < 1%: 2 points
+   - Frequency 1-3%: 4 points
+   - Frequency 4-6%: 6 points
+   - ... (scales up)
+
+   Severity levels:
+   - 0-10: Normal
+   - 11-20: Mild
+   - 21-30: Moderate
+   - 31-40: Severe
+   - 41+: Very Severe
+
+
+STEP 8: RESULT AGGREGATION
+--------------------------------------------------------------------------------
+Combines all analyses into unified response:
+
+{
+  "transcript": "I use the back",
+  "analysis_mode": "enhanced",
+
+  "phoneme_analysis": {
+    "per_rule": 0.333,        // Rule-based PER
+    "wper": 0.100,            // Weighted PER
+    "per_ml": 0.200,          // ML-based PER
+    "overall_gop": -0.45,     // Pronunciation quality
+    "errors": [
+      {
+        "type": "substitution",
+        "expected": "G",
+        "actual": "K",
+        "phonetic_distance": 0.15,
+        "clinical_significance": "Minor - phonetically similar"
+      }
+    ],
+    "clinical_notes": [
+      "Substitution pattern detected",
+      "Errors are phonetically similar - phonological system preserved"
+    ]
+  },
+
+  "semantic_evaluation": {
+    "classification": "partial",
+    "similarity_score": 0.85,
+    "semantic_paraphasia": {
+      "detected": true,
+      "type": "phonological",
+      "target_word": "bag",
+      "produced_word": "back"
+    }
+  },
+
+  "fluency_analysis": {
+    "longest_fluent_run": 4,
+    "total_pauses": 1,
+    "hesitation_count": 1,
+    "speech_rate": 2.5,
+    "ssi_severity": "normal"
+  },
+
+  "summary": {
+    "per_rule": 0.333,
+    "per_ml": 0.200,
+    "wper": 0.100,
+    "semantic_classification": "partial",
+    "semantic_paraphasia_detected": true
+  }
+}
+
+
+STEP 9: DATABASE PERSISTENCE
+--------------------------------------------------------------------------------
+All results are saved for longitudinal tracking:
+
+1. RECORDING STORAGE
+   - Full analysis JSON saved to recordings table
+   - Linked to session_id and patient_id
+   - Timestamps for temporal analysis
+
+2. PHONEME HISTORY TRACKING
+   - Tracks problematic phonemes per patient
+   - Enables identification of persistent errors
+   - Supports targeted therapy planning
+
+3. SESSION AGGREGATION
+   - Calculates session-level averages
+   - Tracks progress within sessions
+   - Identifies improvement patterns
+
+
+STEP 10: THERAPIST DASHBOARD
+--------------------------------------------------------------------------------
+Visualizes patient progress:
+
+1. PATIENT SELECTION
+   - Dropdown to select patient by ID
+   - Loads all historical data
+
+2. PROGRESS CHARTS (Chart.js)
+   - PER/WPER over time (line chart)
+   - Fluency metrics trend
+   - Error type distribution (pie chart)
+
+3. CLINICAL INSIGHTS
+   - Auto-generated observations
+   - Problematic phoneme identification
+   - Improvement suggestions
+
+
+================================================================================
+                         SYSTEM ARCHITECTURE
 ================================================================================
 
 +-------------------------------------------------------------------------+
@@ -81,7 +471,163 @@ SYSTEM ARCHITECTURE
 +---------------------------------------------------------------------------+
 
 
-SUCCESSFULLY IMPLEMENTED FEATURES
+================================================================================
+                    KEY METRICS EXPLAINED
+================================================================================
+
+PHONEME ERROR RATE (PER)
+--------------------------------------------------------------------------------
+Measures pronunciation accuracy at the phoneme level.
+
+Formula: PER = (S + D + I) / N
+
+Where:
+- S = Substitutions (wrong phoneme)
+- D = Deletions (missing phoneme)
+- I = Insertions (extra phoneme)
+- N = Total expected phonemes
+
+Example:
+Expected: /B AE G/ (bag)
+Actual:   /B AE K/ (back)
+PER = 1/3 = 0.333 (33% error)
+
+Two versions in this system:
+- per_rule: Calculated from text (CMUdict lookup)
+- per_ml: Calculated from audio (Wav2Vec2 detection)
+
+
+WEIGHTED PHONEME ERROR RATE (WPER)
+--------------------------------------------------------------------------------
+Like PER but weights errors by clinical significance.
+
+Formula: WPER = Sum(w_i) / N
+
+Where w_i is the weight for each error:
+- Phonetically similar substitution: 0.3
+- Phonetically dissimilar substitution: 0.7
+- Unstressed deletion: 0.4
+- Stressed deletion: 0.8
+- Insertion: 0.6
+- Metathesis: 0.5
+
+Clinical rationale:
+- Similar sound errors indicate intact phonological system
+- Dissimilar errors suggest more severe impairment
+- Stressed syllable errors are more noticeable
+
+
+GOODNESS OF PRONUNCIATION (GOP)
+--------------------------------------------------------------------------------
+Acoustic measure of pronunciation quality from ML model.
+
+Formula: GOP = (1/T) * Sum(log P(p_t | x_t))
+
+Where:
+- T = Number of frames
+- P(p_t | x_t) = Probability of phoneme p at frame t
+
+Interpretation:
+- GOP ≈ 0: Excellent pronunciation (high confidence)
+- GOP ≈ -1: Good pronunciation
+- GOP ≈ -2: Fair pronunciation
+- GOP < -3: Poor pronunciation
+
+Advantage: Works on audio directly, not dependent on transcription accuracy.
+
+
+LONGEST FLUENT RUN (LFR)
+--------------------------------------------------------------------------------
+Maximum consecutive words without dysfluency.
+
+Calculation:
+1. Mark each word as fluent or dysfluent
+2. Find longest streak of fluent words
+3. LFR with tolerance allows 1-2 minor hesitations
+
+Clinical significance:
+- Low LFR (<3): Severe fluency impairment
+- Medium LFR (3-6): Moderate impairment
+- High LFR (>6): Mild or no impairment
+
+
+SSI-4 SCORE (Stuttering Severity Instrument)
+--------------------------------------------------------------------------------
+Standardized stuttering severity measure.
+
+Components:
+1. Frequency Score (% stuttered syllables)
+   - <1%: 2 pts, 1-2%: 4 pts, 2-3%: 5 pts, etc.
+
+2. Duration Score (average stutter length)
+   - <0.5s: 2 pts, 0.5-1s: 4 pts, 1-2s: 6 pts, etc.
+
+Total Score interpretation:
+- 0-10: Normal fluency
+- 11-20: Mild stuttering
+- 21-30: Moderate stuttering
+- 31-40: Severe stuttering
+- 41+: Very severe stuttering
+
+
+================================================================================
+                    CLINICAL USE CASES
+================================================================================
+
+1. INITIAL ASSESSMENT
+--------------------------------------------------------------------------------
+- Patient completes session with multiple prompts
+- System establishes baseline metrics
+- Identifies primary error patterns
+- Generates recommendations for therapy focus
+
+Example output:
+"Patient shows consistent final consonant deletion (PER=0.35).
+ Phonological system partially preserved (WPER=0.18).
+ Recommend targeting velar stops /k/, /g/."
+
+
+2. PROGRESS MONITORING
+--------------------------------------------------------------------------------
+- Compare metrics across sessions
+- Track improvement in specific phonemes
+- Visualize trends on dashboard
+- Generate progress reports
+
+Example:
+Session 1: PER=0.40, LFR=3
+Session 5: PER=0.25, LFR=5
+→ 37% improvement in pronunciation
+→ 67% improvement in fluency
+
+
+3. PARAPHASIA ANALYSIS
+--------------------------------------------------------------------------------
+- Differentiates phonological vs semantic errors
+- Tracks word-finding patterns
+- Identifies circumlocution strategies
+
+Example patterns:
+- Phonological paraphasia: "spoon" → "spood" (sound-based)
+- Semantic paraphasia: "spoon" → "fork" (category-based)
+- Circumlocution: "the thing you eat soup with"
+
+
+4. FLUENCY DISORDER ASSESSMENT
+--------------------------------------------------------------------------------
+- Quantifies stuttering severity
+- Identifies dysfluency types
+- Tracks response to treatment
+
+Example report:
+"SSI-4 Score: 24 (Moderate severity)
+ Primary dysfluency: Sound repetitions (60%)
+ Secondary behaviors: Blocks (25%)
+ LFR improved from 2 to 4 words over 3 sessions"
+
+
+================================================================================
+                    SUCCESSFULLY IMPLEMENTED FEATURES
 ================================================================================
 
 1. AUTOMATIC SPEECH RECOGNITION (ASR)
@@ -91,7 +637,6 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    [x] Multi-format audio support (webm, wav, mp3)
    [x] PyAV-based audio conversion (bundled FFmpeg)
    [x] English-only transcription to prevent language detection errors
-   [x] SONIVA model support (fine-tuned for aphasia speech) - optional
 
 2. WORD-LEVEL METRICS
    [x] Word Error Rate (WER) calculation using jiwer
@@ -99,8 +644,8 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    [x] Pause ratio (silence percentage)
    [x] Segment-level analysis
 
-3. ML-BASED PHONEME ANALYSIS (NEW - Wav2Vec2)
-   [x] Wav2Vec2 acoustic phoneme recognition (facebook/wav2vec2-lv-60-espeak-cv-ft)
+3. ML-BASED PHONEME ANALYSIS (Wav2Vec2)
+   [x] Wav2Vec2 acoustic phoneme recognition
    [x] Direct audio-to-IPA phoneme mapping
    [x] IPA to ARPAbet conversion for consistent comparison
    [x] Goodness of Pronunciation (GOP) scores per phoneme
@@ -110,94 +655,64 @@ SUCCESSFULLY IMPLEMENTED FEATURES
    [x] Frame-level probability analysis
    [x] Database persistence of all ML phoneme metrics
 
-4. TEXT-BASED PHONEME ANALYSIS (Enhanced)
+4. RULE-BASED PHONEME ANALYSIS (Enhanced)
    [x] CMU Pronouncing Dictionary integration (134,000+ words)
    [x] Weighted Phoneme Error Rate (WPER) with phonetic distance
    [x] Phonetic feature-based distance calculation
-   [x] Error type classification:
-      - Substitutions (phonetically similar vs dissimilar)
-      - Deletions (stressed vs unstressed)
-      - Insertions
-      - Metathesis (transposition)
+   [x] Error type classification (substitution, deletion, insertion, metathesis)
    [x] Conduite d'approche detection (progressive improvement)
    [x] Multi-attempt segmentation and analysis
-   [x] Phoneme class error tracking (fricatives, stops, vowels, etc.)
+   [x] Phoneme class error tracking
    [x] Clinical insights generation based on error patterns
 
 5. ENHANCED SEMANTIC ANALYSIS
-   [x] Sentence transformer-based similarity (all-MiniLM-L6-v2)
-   [x] Multi-tier classification:
-      - Correct (high similarity)
-      - Partial (moderate similarity)
-      - Wrong (low similarity)
-      - Circumlocution (descriptive workaround)
-      - Semantic paraphasia (related word substitution)
+   [x] Sentence transformer-based similarity
+   [x] Multi-tier classification (correct, partial, wrong, circumlocution)
+   [x] Position-based semantic paraphasia detection
+   [x] Phonological vs semantic paraphasia distinction
    [x] WordNet-based category similarity
    [x] Object feature matching for circumlocution detection
-   [x] Paraphasia type identification (semantic, phonemic)
    [x] Clinical significance notes
 
-6. ML-BASED FLUENCY & STUTTERING ANALYSIS (Silero VAD)
+6. ML-BASED FLUENCY & STUTTERING ANALYSIS
    [x] Silero VAD for voice activity detection
-   [x] ML-based pause detection and classification:
-      - Hesitations (300ms - 1s)
-      - Blocks (>1s)
-      - Anomic pauses (word-finding difficulty)
-      - Apraxic pauses (motor planning)
-   [x] ML-based stuttering detection:
-      - Repetitions (word/sound level)
-      - Prolongations
-      - Interjections
-      - Blocks
+   [x] ML-based pause detection and classification
+   [x] ML-based stuttering detection (repetitions, prolongations, blocks)
    [x] Longest Fluent Run (LFR) with tolerance
    [x] SSI-4 approximation (Stuttering Severity Instrument)
-   [x] Speech rate metrics:
-      - Articulation rate (excluding pauses)
-      - Speaking rate (including pauses)
-      - Phonation time and ratio
-   [x] Rate variability analysis (CV, PVI, trend)
-   [x] Weighted fluency scoring
+   [x] Speech rate metrics (articulation rate, speaking rate)
+   [x] Rate variability analysis
 
 7. DATA PERSISTENCE & SESSION MANAGEMENT
    [x] Automatic database saving of all analysis results
    [x] ML phoneme analysis persistence (GOP, PER_ML, alignment)
    [x] Session tracking (grouping multiple prompts)
    [x] Patient identification and longitudinal tracking
-   [x] Comprehensive query functions:
-      - Patient recording history with filtering
-      - Progress tracking over time (trends)
-      - Phoneme trend analysis
-      - Session summaries with aggregate metrics
-   [x] Patient phoneme history tracking
+   [x] Comprehensive query functions
    [x] API endpoints for therapist insights
 
 8. DYNAMIC PROMPT GENERATION (LLM-Powered)
-   [x] Ollama integration (zero-cost, local, privacy-preserving)
+   [x] Ollama integration (local, privacy-preserving)
    [x] Default model: gemma2:2b (lightweight, fast)
    [x] Support for ANY object (unlimited vocabulary)
-   [x] Contextually appropriate question generation
-   [x] Multiple expected answers per question
    [x] Database caching for instant reuse
    [x] Graceful fallback to template-based prompts
-   [x] Real-time LLM status indicators in UI
 
 9. THERAPIST DASHBOARD
    [x] Patient progress visualization
    [x] Interactive Chart.js visualizations
    [x] Clinical insights panel
-   [x] Summary metric cards
    [x] Recent sessions table with expandable details
-   [x] Patient selector with real-time data loading
 
-10. USER INTERFACE (Patient/Recorder)
+10. USER INTERFACE
     [x] Browser-based audio recording
     [x] Automatic silence detection (VAD)
     [x] Comprehensive result display
-    [x] Collapsible detailed views
     [x] Session management
 
 
-TECHNICAL SPECIFICATIONS
+================================================================================
+                    TECHNICAL SPECIFICATIONS
 ================================================================================
 
 BACKEND STACK:
@@ -228,7 +743,7 @@ AUDIO PROCESSING:
   - Silero VAD for speech segment detection
   - Auto-stop: 900ms silence or 8s timeout
 
-KEY DEPENDENCIES (requirements.txt):
+KEY DEPENDENCIES:
   - fastapi, uvicorn
   - sqlalchemy, python-multipart
   - faster-whisper
@@ -244,7 +759,8 @@ KEY DEPENDENCIES (requirements.txt):
   - nltk (WordNet, CMUdict)
 
 
-FILE STRUCTURE
+================================================================================
+                    FILE STRUCTURE
 ================================================================================
 
 FINAL PROJECT/
@@ -275,7 +791,6 @@ FINAL PROJECT/
 |   |   +-- prompts.py               # Legacy hardcoded prompts
 |   |   +-- metrics.py               # WER, rate, pause calculations
 |   |   +-- audio.py                 # Audio preprocessing
-|   |   +-- forced_alignment.py      # Gentle integration (optional)
 |   |
 |   +-- models/
 |   |   +-- whisper_model.py         # Whisper ASR singleton
@@ -286,8 +801,6 @@ FINAL PROJECT/
 |   |   +-- schema.py                # Table initialization
 |   |   +-- schema.sql               # Full SQL schema
 |   |   +-- persistence.py           # Save/query functions
-|   |   +-- migrate_ml_phoneme.py    # Migration for ML columns
-|   |   +-- migrate_enhanced_schema.py  # Migration for enhanced analysis
 |   |
 |   +-- data/
 |   |   +-- objects.py               # Object definitions
@@ -315,94 +828,8 @@ FINAL PROJECT/
 +-- project_documentation.txt        # This file
 
 
-KEY ALGORITHMS
 ================================================================================
-
-1. ML-BASED PHONEME RECOGNITION (Wav2Vec2):
-
-   Model: facebook/wav2vec2-lv-60-espeak-cv-ft
-   Output: IPA phoneme sequence from raw audio
-
-   Process:
-   1. Load audio, resample to 16kHz
-   2. Extract features using Wav2Vec2FeatureExtractor
-   3. Run through Wav2Vec2ForCTC model
-   4. Decode logits to IPA phonemes via CTC
-   5. Convert IPA to ARPAbet for comparison with CMUdict
-   6. Calculate GOP from frame probabilities
-
-2. GOODNESS OF PRONUNCIATION (GOP):
-
-   GOP = log P(phoneme | acoustic features)
-
-   Calculation:
-   1. Get frame-level softmax probabilities from model
-   2. For each phoneme segment, average max probabilities
-   3. Take log probability as GOP score
-   4. Score near 0 = good pronunciation
-   5. Score << 0 = poor pronunciation
-
-3. IPA TO ARPABET CONVERSION:
-
-   Wav2Vec2 outputs IPA symbols, CMUdict uses ARPAbet.
-   phoneme_mapping.py provides bidirectional conversion.
-
-   Example:
-   IPA:     [a, r, a, h, i, u:, s, t, o, b, a, k]
-   ARPAbet: [AA, R, AA, HH, IY, UW, S, T, OW, B, AA, K]
-
-4. WEIGHTED PHONEME ERROR RATE (WPER):
-
-   WPER = Sum(error_weights) / N
-
-   Weights based on phonetic distance:
-   - Phonetically similar substitution: 0.3
-   - Phonetically dissimilar substitution: 0.7
-   - Deletion (unstressed): 0.4
-   - Deletion (stressed): 0.8
-   - Insertion: 0.6
-   - Metathesis: 0.5
-
-5. PHONETIC DISTANCE:
-
-   Based on articulatory features:
-   - Voicing (voiced/voiceless): 15%
-   - Place of articulation: 25%
-   - Manner of articulation: 30%
-   - Vowel height: 15%
-   - Vowel backness: 15%
-
-6. SILERO VAD FOR PAUSE DETECTION:
-
-   Model: silero-vad (snakers4/silero-vad)
-
-   Process:
-   1. Run VAD on audio to get speech probabilities
-   2. Identify speech vs non-speech segments
-   3. Calculate pause durations between speech segments
-   4. Classify pauses by duration and context:
-      - Hesitation: 300ms - 1000ms
-      - Block: >1000ms
-      - Anomic: Before content word
-      - Apraxic: Multiple attempts pattern
-
-7. SSI-4 APPROXIMATION:
-
-   Stuttering Severity Instrument scoring:
-   - Frequency: % of syllables stuttered
-   - Duration: Average stutter duration
-   - Total score maps to severity level
-
-8. SEMANTIC PARAPHASIA DETECTION:
-
-   Uses WordNet for category analysis:
-   1. Get hypernym chains for expected and produced words
-   2. Find lowest common ancestor
-   3. Calculate semantic distance
-   4. Classify: semantic (related category) vs phonemic (sound-alike)
-
-
-DATABASE SCHEMA
+                    DATABASE SCHEMA
 ================================================================================
 
 recordings table:
@@ -414,14 +841,14 @@ recordings table:
   # Word-level metrics
   - wer, speech_rate, pause_ratio
 
-  # Text-based phoneme metrics
+  # Rule-based phoneme metrics
   - per, wper, total_phonemes
   - phoneme_errors_json, problematic_phonemes_json
   - phoneme_class_errors_json, error_pattern_analysis_json
   - conduite_d_approche_detected, multi_attempt_analysis_json
   - clinical_notes_json
 
-  # ML Phoneme metrics (NEW)
+  # ML Phoneme metrics
   - ml_per                       # ML-based PER
   - ml_gop                       # Overall GOP score
   - ml_confidence                # Model confidence
@@ -437,94 +864,55 @@ recordings table:
   - semantic_paraphasia_json
 
   # Enhanced fluency metrics
-  - longest_fluent_run, lfr_with_tolerance, lfr_ratio
+  - longest_fluent_run, lfr_with_tolerance
   - total_pauses, hesitation_count, block_count
-  - anomic_pause_count, apraxic_pause_count
-  - mean_pause_duration
-  - articulation_rate, speaking_rate, pause_adjusted_rate
-  - phonation_time, phonation_ratio, pathological_pause_ratio
-  - local_cv, global_cv, normalized_pvi, rate_trend
-  - ssi_frequency_pct, ssi_frequency_score
-  - ssi_avg_duration, ssi_duration_score
+  - articulation_rate, speaking_rate
   - ssi_total_score, ssi_severity
-  - standard_fluency_pct, weighted_fluency_pct, clinical_fluency_pct
   - stuttering_events_json, pauses_json, fluency_notes_json
-  - dysfluency_profile_json
 
   # Metadata
   - analysis_mode, disorder_type, created_at
 
-patient_phoneme_history table:
-  - id, patient_id, phoneme
-  - error_count, occurrence_count
-  - last_error_date, created_at
 
-generated_prompts table:
-  - id, object_name (UNIQUE)
-  - prompts_json, model_name, generation_method
-  - created_at, last_used_at
-
-session_progress table:
-  - id, session_id (UNIQUE), patient_id
-  - start_time, end_time
-  - total_recordings
-  - avg_wper, avg_per, avg_weighted_fluency, avg_lfr, avg_ssi_score
-  - objects_practiced, clinical_summary_json
-
-patient_baselines table:
-  - id, patient_id (UNIQUE), disorder_type
-  - baseline_per, baseline_wper, baseline_lfr, baseline_fluency
-  - baseline_articulation_rate
-  - mean_pause_duration, std_pause_duration, cv_rate
-  - baseline_date, notes
-
-
-API ENDPOINTS
 ================================================================================
+                    API ENDPOINTS
+================================================================================
+
+POST /session/start
+  - Initialize new session
+  - Parameters: object_name (optional), patient_id (optional)
+  - Returns: session_id, first prompt
+
+POST /session/next-prompt
+  - Get next prompt in session
+  - Parameters: session_id
+  - Returns: prompt_text, expected_answer
 
 POST /record
   - Main analysis endpoint
-  - Returns comprehensive analysis including ML phoneme metrics:
-      * ml_analysis: {
-          detected_phonemes: [],      # ARPAbet
-          detected_phonemes_ipa: [],  # IPA
-          expected_phonemes: [],      # ARPAbet from CMUdict
-          per_ml: float,              # ML-based PER
-          overall_gop: float,         # GOP score
-          model_confidence: float,
-          alignment: [(exp, det), ...],
-          phoneme_scores: [{phoneme, gop_score, ...}, ...]
-        }
-
-GET /patient/{patient_id}/history
-  - Returns recordings with ML metrics included
-
-GET /patient/{patient_id}/progress
-  - Aggregated progress including ML metrics
+  - Parameters: session_id, object_name, prompt_text, expected_answer, audio
+  - Returns: Complete analysis JSON
 
 POST /generate-prompts
-  - LLM-powered prompt generation
+  - Generate prompts for new object using LLM
+  - Parameters: object_name
+  - Returns: List of prompts with expected answers
 
-GET /ollama/status
-  - Check LLM availability
+GET /patient/{patient_id}/history
+  - Get recording history for patient
+  - Returns: List of recordings with all metrics
+
+GET /patient/{patient_id}/progress
+  - Get aggregated progress metrics
+  - Returns: Trends, averages, improvements
+
+GET /session/{session_id}/summary
+  - Get session-level summary
+  - Returns: Aggregated metrics for session
 
 
-RESEARCH APPLICATIONS
 ================================================================================
-
-This system enables research on:
-
-1. Acoustic phoneme analysis in disordered speech
-2. GOP-based pronunciation assessment in aphasia
-3. Longitudinal tracking with objective ML metrics
-4. Comparison of text-based vs acoustic phoneme analysis
-5. Semantic paraphasia patterns and recovery
-6. Fluency disorder progression with VAD-based metrics
-7. SSI-4 validation with automated scoring
-8. Multi-modal speech assessment (acoustic + linguistic)
-
-
-USAGE INSTRUCTIONS
+                    USAGE INSTRUCTIONS
 ================================================================================
 
 SETUP:
@@ -550,15 +938,33 @@ SETUP:
    http://localhost:8000/dashboard (Therapist Dashboard)
 
 
-KNOWN LIMITATIONS & FUTURE WORK
+================================================================================
+                    RESEARCH APPLICATIONS
+================================================================================
+
+This system enables research on:
+
+1. Acoustic phoneme analysis in disordered speech
+2. GOP-based pronunciation assessment in aphasia
+3. Longitudinal tracking with objective ML metrics
+4. Comparison of text-based vs acoustic phoneme analysis
+5. Semantic paraphasia patterns and recovery
+6. Fluency disorder progression with VAD-based metrics
+7. SSI-4 validation with automated scoring
+8. Multi-modal speech assessment (acoustic + linguistic)
+
+
+================================================================================
+                    KNOWN LIMITATIONS & FUTURE WORK
 ================================================================================
 
 CURRENT LIMITATIONS:
 
 1. No user authentication
-2. Session storage is in-memory
-3. SONIVA Whisper model not bundled (optional download)
-4. espeak-ng required for ML phoneme analysis
+2. Session storage is in-memory (lost on server restart)
+3. SONIVA Whisper model requires manual download
+4. espeak-ng required for some phoneme operations
+5. English-only support
 
 FUTURE ENHANCEMENTS:
 
@@ -567,9 +973,11 @@ FUTURE ENHANCEMENTS:
 3. Multi-language support
 4. HIPAA-compliant deployment
 5. Integration with EHR systems
+6. SONIVA model integration (aphasia-specific ASR)
 
 
-CITATION
+================================================================================
+                    CITATION
 ================================================================================
 
 If you use this system in your research, please cite:
@@ -578,7 +986,8 @@ If you use this system in your research, please cite:
 ML-Based Phoneme Analysis for Aphasia Assessment. [Journal Name].
 
 
-ACKNOWLEDGMENTS
+================================================================================
+                    ACKNOWLEDGMENTS
 ================================================================================
 
 This system uses the following open-source tools:
@@ -593,10 +1002,10 @@ This system uses the following open-source tools:
 - FastAPI, Chart.js
 
 
-Last Updated: January 13, 2026
-Version: 4.0.0
+Last Updated: January 16, 2026
+Version: 4.1.0
 Status: Research MVP with ML-Powered Analysis
-Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | Database Persistence
+Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | Position-based Paraphasia
 
 ================================================================================
                           END OF DOCUMENTATION

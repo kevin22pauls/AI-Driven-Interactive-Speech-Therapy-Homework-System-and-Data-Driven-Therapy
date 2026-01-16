@@ -380,23 +380,91 @@ def detect_circumlocution(
 
 def detect_semantic_paraphasia(
     expected_word: str,
-    actual_words: List[str]
+    actual_words: List[str],
+    expected_sentence: Optional[str] = None,
+    actual_sentence: Optional[str] = None
 ) -> Optional[Dict]:
     """
     Detect semantic paraphasias in the response.
 
     A semantic paraphasia is when a patient substitutes a semantically
-    related word (e.g., "orange" for "apple").
+    related word (e.g., "orange" for "apple", or "back" for "bag").
+
+    This function uses position-aware matching: it compares the word at the
+    same position in the transcript as the target word in the expected sentence.
 
     Args:
-        expected_word: Target word
+        expected_word: Target word (the object name)
         actual_words: Words in patient's response
+        expected_sentence: The expected sentence (e.g., "I use the bag.")
+        actual_sentence: The actual transcript (e.g., "I use the back.")
 
     Returns:
         Dictionary with paraphasia analysis or None
     """
     expected_lower = expected_word.lower()
 
+    # Strategy 1: Position-based matching (preferred)
+    # Find the position of expected_word in expected_sentence,
+    # then check the word at that position in actual_sentence
+    if expected_sentence and actual_sentence:
+        expected_words_list = expected_sentence.lower().split()
+        actual_words_list = actual_sentence.lower().split()
+
+        # Find position of target word in expected sentence
+        target_position = None
+        for i, word in enumerate(expected_words_list):
+            word_clean = word.strip('.,!?;:"\'')
+            if word_clean == expected_lower:
+                target_position = i
+                break
+
+        if target_position is not None and target_position < len(actual_words_list):
+            # Get the word at the same position in actual response
+            produced_word = actual_words_list[target_position].strip('.,!?;:"\'')
+
+            # Skip if it's the correct word
+            if produced_word == expected_lower:
+                return None
+
+            # Check semantic relationship
+            category_match = check_semantic_category(expected_word, produced_word)
+
+            # For position-matched words, also check phonetic similarity
+            # (e.g., "bag" -> "back" is a phonological paraphasia, not semantic)
+            is_phonetically_similar = _check_phonetic_similarity(expected_lower, produced_word)
+
+            if is_phonetically_similar:
+                return {
+                    'paraphasia_type': 'phonological',
+                    'expected_word': expected_word,
+                    'produced_word': produced_word,
+                    'semantic_similarity': category_match.path_similarity,
+                    'shared_category': category_match.category_name,
+                    'clinical_significance': f"Phonological paraphasia: '{produced_word}' for '{expected_word}' - words are phonetically similar"
+                }
+            elif category_match.same_category or category_match.path_similarity > 0.3:
+                return {
+                    'paraphasia_type': 'semantic',
+                    'expected_word': expected_word,
+                    'produced_word': produced_word,
+                    'semantic_similarity': category_match.path_similarity,
+                    'shared_category': category_match.category_name,
+                    'clinical_significance': f"Semantic paraphasia: '{produced_word}' for '{expected_word}' - words share category '{category_match.category_name or 'semantic field'}'"
+                }
+            elif produced_word != expected_lower:
+                # Unrelated substitution
+                return {
+                    'paraphasia_type': 'unrelated',
+                    'expected_word': expected_word,
+                    'produced_word': produced_word,
+                    'semantic_similarity': category_match.path_similarity,
+                    'shared_category': None,
+                    'clinical_significance': f"Unrelated word substitution: '{produced_word}' for '{expected_word}'"
+                }
+
+    # Strategy 2: Fallback - scan all words for semantic relationships
+    # This is used when sentence-level position matching isn't available
     for word in actual_words:
         word_lower = word.lower().strip('.,!?;:"\'')
 
@@ -405,7 +473,7 @@ def detect_semantic_paraphasia(
             return None
 
         # Skip very common words
-        if word_lower in ['the', 'a', 'an', 'it', 'is', 'this', 'that', 'i']:
+        if word_lower in ['the', 'a', 'an', 'it', 'is', 'this', 'that', 'i', 'use', 'have', 'get']:
             continue
 
         # Check semantic relationship
@@ -422,6 +490,45 @@ def detect_semantic_paraphasia(
             }
 
     return None
+
+
+def _check_phonetic_similarity(word1: str, word2: str) -> bool:
+    """
+    Check if two words are phonetically similar (differ by 1-2 phonemes).
+
+    This helps distinguish phonological paraphasias from semantic ones.
+    Examples: bag/back, cat/bat, pen/pin
+
+    Args:
+        word1: First word
+        word2: Second word
+
+    Returns:
+        True if words are phonetically similar
+    """
+    # Simple heuristic: check edit distance and shared characters
+    if len(word1) == 0 or len(word2) == 0:
+        return False
+
+    # Same length, differ by 1-2 characters
+    if abs(len(word1) - len(word2)) <= 1:
+        differences = 0
+        for i in range(min(len(word1), len(word2))):
+            if word1[i] != word2[i]:
+                differences += 1
+        # Add length difference
+        differences += abs(len(word1) - len(word2))
+
+        # Consider phonetically similar if ≤2 character differences
+        if differences <= 2:
+            return True
+
+    # Check if words share same beginning and ending
+    if len(word1) >= 3 and len(word2) >= 3:
+        if word1[:2] == word2[:2] or word1[-2:] == word2[-2:]:
+            return True
+
+    return False
 
 
 def analyze_response_structure(transcript: str, expected: str) -> Dict:
@@ -533,8 +640,13 @@ def evaluate_answer_enhanced(
     # Layer 3: Circumlocution detection
     circum_result = detect_circumlocution(object_name, transcript)
 
-    # Layer 4: Semantic paraphasia detection
-    paraphasia = detect_semantic_paraphasia(object_name, transcript_words)
+    # Layer 4: Semantic paraphasia detection (position-aware)
+    paraphasia = detect_semantic_paraphasia(
+        object_name,
+        transcript_words,
+        expected_sentence=expected_answer,
+        actual_sentence=transcript
+    )
 
     # Analyze response structure
     semantic_features = analyze_response_structure(transcript, expected_answer)
@@ -558,15 +670,30 @@ def evaluate_answer_enhanced(
         clinical_notes.append(circum_result.clinical_significance)
         clinical_notes.append(f"Features mentioned: {', '.join(circum_result.matched_features)}")
 
-    # Semantic paraphasia
+    # Paraphasia detected (semantic, phonological, or unrelated)
     elif paraphasia:
-        classification = 'semantic_paraphasia'
-        confidence = 0.80
-        similarity_score = 0.6
-        explanation = paraphasia['clinical_significance']
-        clinical_notes.append(f"Semantic paraphasia: produced '{paraphasia['produced_word']}' for '{object_name}'")
-        if paraphasia.get('shared_category'):
-            clinical_notes.append(f"Words share category: {paraphasia['shared_category']}")
+        paraphasia_type = paraphasia.get('paraphasia_type', 'semantic')
+        if paraphasia_type == 'phonological':
+            classification = 'phonological_paraphasia'
+            confidence = 0.85
+            similarity_score = 0.7  # Higher score - phonological errors preserve semantics
+            explanation = paraphasia['clinical_significance']
+            clinical_notes.append(f"Phonological paraphasia: produced '{paraphasia['produced_word']}' for '{object_name}'")
+            clinical_notes.append("Words are phonetically similar - lexical access intact, phonological encoding affected")
+        elif paraphasia_type == 'unrelated':
+            classification = 'wrong'
+            confidence = 0.85
+            similarity_score = 0.3
+            explanation = paraphasia['clinical_significance']
+            clinical_notes.append(f"Word substitution: produced '{paraphasia['produced_word']}' for '{object_name}'")
+        else:  # semantic
+            classification = 'semantic_paraphasia'
+            confidence = 0.80
+            similarity_score = 0.6
+            explanation = paraphasia['clinical_significance']
+            clinical_notes.append(f"Semantic paraphasia: produced '{paraphasia['produced_word']}' for '{object_name}'")
+            if paraphasia.get('shared_category'):
+                clinical_notes.append(f"Words share category: {paraphasia['shared_category']}")
 
     # Partial match
     elif direct_similarity >= 0.60 or category_similarity > 0.5:
@@ -594,6 +721,8 @@ def evaluate_answer_enhanced(
         similarity_score = 0.7 * circum_result.features_preserved + 0.3 * direct_similarity
     elif classification == 'semantic_paraphasia':
         similarity_score = 0.6
+    elif classification == 'phonological_paraphasia':
+        similarity_score = 0.7  # Already set above, but be explicit
     else:
         similarity_score = direct_similarity
 

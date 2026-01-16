@@ -37,7 +37,7 @@ ML_CONFIG = {
     # Example paths:
     #   - Local: os.path.join(BASE_DIR, "models", "soniva-whisper-medium")
     #   - HuggingFace: "Clinical-Language-Cognition-Lab/soniva-whisper-medium" (if available)
-    'use_soniva_whisper': True,      # Enable SONIVA model (falls back to faster-whisper if unavailable)
+    'use_soniva_whisper': False,     # Disabled - SONIVA model not available (requires Google Drive access)
     'soniva_model_path': os.path.join(BASE_DIR, "models", "soniva-whisper-medium"),  # Path to SONIVA weights
 
     # Model variants (use smaller for CPU)

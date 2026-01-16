@@ -204,15 +204,36 @@ def analyze_speech(
     if prompt_data and prompt_data.get("expected_answer"):
         if use_enhanced:
             try:
+                # Step 1: Run ML phoneme analysis first (acoustic ground truth)
+                ml_phoneme_result = None
+                ml_detected_phonemes = None
+
+                if USE_ML_PHONEME_ANALYSIS:
+                    try:
+                        logger.info("Running ML phoneme analysis for acoustic ground truth")
+                        ml_phoneme_result = analyze_phonemes_ml(
+                            audio_path=audio_path,
+                            expected_text=prompt_data["expected_answer"]
+                        )
+                        if ml_phoneme_result and ml_phoneme_result.detected_phonemes:
+                            ml_detected_phonemes = ml_phoneme_result.detected_phonemes
+                            logger.info(f"ML phoneme - detected {len(ml_detected_phonemes)} phonemes, "
+                                       f"GOP: {ml_phoneme_result.overall_gop:.2f}, "
+                                       f"PER_ML: {ml_phoneme_result.per_ml:.2f}")
+                    except Exception as ml_e:
+                        logger.warning(f"ML phoneme analysis failed (non-critical): {ml_e}")
+
+                # Step 2: Run enhanced phoneme analysis using ML-detected phonemes
                 logger.info("Performing enhanced phoneme analysis")
                 phoneme_result = analyze_phonemes_enhanced(
                     expected_text=prompt_data["expected_answer"],
                     actual_text=transcript,
-                    word_timings=word_timings
+                    word_timings=word_timings,
+                    ml_detected_phonemes=ml_detected_phonemes  # Use acoustic ground truth
                 )
                 result["phoneme_analysis"] = format_enhanced_phoneme_result_for_api(phoneme_result)
 
-                logger.info(f"Enhanced phoneme - PER: {phoneme_result.per:.2f}, "
+                logger.info(f"Enhanced phoneme - PER: {phoneme_result.per_rule:.2f}, "
                            f"WPER: {phoneme_result.wper:.2f}, "
                            f"Errors: {len(phoneme_result.errors)}")
 
@@ -220,21 +241,11 @@ def analyze_speech(
                 if phoneme_result.multi_attempt_result and phoneme_result.multi_attempt_result.conduite_d_approche:
                     logger.info("Conduite d'approche pattern detected!")
 
-                # Run ML phoneme analysis for acoustic-based GOP scores
-                if USE_ML_PHONEME_ANALYSIS:
-                    try:
-                        ml_phoneme_result = analyze_phonemes_ml(
-                            audio_path=audio_path,
-                            expected_text=prompt_data["expected_answer"]
-                        )
-                        if ml_phoneme_result:
-                            result["phoneme_analysis"]["ml_analysis"] = format_ml_phoneme_result_for_api(ml_phoneme_result)
-                            result["phoneme_analysis"]["overall_gop"] = round(ml_phoneme_result.overall_gop, 3)
-                            result["phoneme_analysis"]["per_ml"] = round(ml_phoneme_result.per_ml, 3)
-                            logger.info(f"ML phoneme - GOP: {ml_phoneme_result.overall_gop:.2f}, "
-                                       f"PER_ML: {ml_phoneme_result.per_ml:.2f}")
-                    except Exception as ml_e:
-                        logger.warning(f"ML phoneme analysis failed (non-critical): {ml_e}")
+                # Step 3: Add ML analysis results to output
+                if ml_phoneme_result:
+                    result["phoneme_analysis"]["ml_analysis"] = format_ml_phoneme_result_for_api(ml_phoneme_result)
+                    result["phoneme_analysis"]["overall_gop"] = round(ml_phoneme_result.overall_gop, 3)
+                    result["phoneme_analysis"]["per_ml"] = round(ml_phoneme_result.per_ml, 3)
 
             except Exception as e:
                 logger.error(f"Enhanced phoneme analysis failed, falling back to standard: {e}", exc_info=True)
@@ -417,7 +428,8 @@ def _generate_summary(result: Dict, use_enhanced: bool) -> Dict:
     # Phoneme summary
     phoneme = result.get("phoneme_analysis", {})
     if phoneme and "error" not in phoneme:
-        summary["per"] = phoneme.get("per", 0)
+        # Use per_rule if available, fall back to per for backwards compatibility
+        summary["per_rule"] = phoneme.get("per_rule") or phoneme.get("per", 0)
         if use_enhanced:
             summary["wper"] = phoneme.get("wper", 0)
             # Add ML phoneme metrics if available
