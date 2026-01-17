@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recording Analysis - Speech Therapy System</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f7fa;
+      color: #2c3e50;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px 20px;
+      margin-bottom: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .back-btn {
+      display: inline-block;
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-top: 15px;
+      transition: background 0.2s;
+    }
+
+    .back-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .card {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .card h2 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .meta-item {
+      padding: 12px;
+      background: #f7fafc;
+      border-radius: 6px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #718096;
+      margin-bottom: 4px;
+    }
+
+    .meta-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .transcript-box {
+      background: #f7fafc;
+      padding: 16px;
+      border-radius: 6px;
+      font-size: 16px;
+      line-height: 1.6;
+      border-left: 4px solid #667eea;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge.correct { background: #d4edda; color: #155724; }
+    .badge.partial { background: #fff3cd; color: #856404; }
+    .badge.wrong { background: #f8d7da; color: #721c24; }
+    .badge.paraphasia { background: #e2e3f3; color: #4a4d6e; }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+
+    .metric-box {
+      text-align: center;
+      padding: 16px;
+      background: #f7fafc;
+      border-radius: 8px;
+      border-top: 3px solid;
+    }
+
+    .metric-box.per { border-top-color: #f39c12; }
+    .metric-box.lfr { border-top-color: #3498db; }
+    .metric-box.fluency { border-top-color: #2ecc71; }
+    .metric-box.wer { border-top-color: #e74c3c; }
+    .metric-box.gop { border-top-color: #9b59b6; }
+
+    .metric-number {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .metric-name {
+      font-size: 12px;
+      color: #718096;
+      margin-top: 4px;
+    }
+
+    .error-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .error-table th {
+      background: #f7fafc;
+      padding: 10px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #718096;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .error-table td {
+      padding: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .error-type {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .error-type.substitution { background: #ffeaa7; color: #7d6608; }
+    .error-type.deletion { background: #fab1a0; color: #7c2d12; }
+    .error-type.insertion { background: #81ecec; color: #0c5460; }
+
+    .clinical-note {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      background: #fff3cd;
+      border-left: 3px solid #ffc107;
+    }
+
+    .stutter-event {
+      display: inline-block;
+      padding: 6px 12px;
+      margin: 4px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .stutter-event .type {
+      font-weight: 600;
+      color: #667eea;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #718096;
+      font-size: 16px;
+    }
+
+    .error-msg {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .section-empty {
+      color: #a0aec0;
+      font-style: italic;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .ml-phoneme-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .ml-phoneme {
+      padding: 6px 10px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .ml-phoneme.good { background: #d4edda; }
+    .ml-phoneme.warning { background: #fff3cd; }
+    .ml-phoneme.bad { background: #f8d7da; }
+
+    @media (max-width: 768px) {
+      .container { padding: 10px; }
+      .metric-row { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Recording Analysis</h1>
+      <p class="subtitle" id="headerInfo">Loading recording details...</p>
+      <a href="/dashboard" class="back-btn">Back to Dashboard</a>
+    </header>
+
+    <div id="content">
+      <div class="loading">Loading analysis data...</div>
+    </div>
+  </div>
+
+  <script>
+    const BACKEND = "http://127.0.0.1:8001";
+
+    async function loadRecording() {
+      const params = new URLSearchParams(window.location.search);
+      const recordingId = params.get('recording_id');
+
+      if (!recordingId) {
+        showError('No recording ID provided. Please access this page from the dashboard.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${BACKEND}/recording/${recordingId}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            showError('Recording not found. It may have been deleted.');
+          } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        renderAnalysis(data);
+
+      } catch (error) {
+        console.error('Error loading recording:', error);
+        showError(`Failed to load recording: ${error.message}`);
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('content').innerHTML = `
+        <div class="error-msg">${message}</div>
+      `;
+    }
+
+    function renderAnalysis(rec) {
+      // Update header
+      const date = new Date(rec.created_at).toLocaleString();
+      document.getElementById('headerInfo').textContent =
+        `${rec.object_name || 'Unknown Object'} - ${date}`;
+
+      let html = '';
+
+      // Transcript Section
+      html += `
+        <div class="card">
+          <h2>Transcript</h2>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="meta-label">Prompt</div>
+              <div class="meta-value">${rec.prompt_text || 'N/A'}</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Expected Answer</div>
+              <div class="meta-value">${rec.expected_answer || 'N/A'}</div>
+            </div>
+          </div>
+          <div class="transcript-box">${rec.transcript || 'No transcript available'}</div>
+        </div>
+      `;
+
+      // Semantic Evaluation Section
+      html += `
+        <div class="card">
+          <h2>Semantic Evaluation</h2>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="meta-label">Classification</div>
+              <div class="meta-value">
+                <span class="badge ${(rec.semantic_classification || '').toLowerCase()}">
+                  ${rec.semantic_classification || 'N/A'}
+                </span>
+              </div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Similarity Score</div>
+              <div class="meta-value">
+                ${rec.semantic_score != null ? (rec.semantic_score * 100).toFixed(1) + '%' : 'N/A'}
+              </div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Word Error Rate (WER)</div>
+              <div class="meta-value">
+                ${rec.wer != null ? (rec.wer * 100).toFixed(1) + '%' : 'N/A'}
+              </div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Speech Rate</div>
+              <div class="meta-value">
+                ${rec.speech_rate != null ? rec.speech_rate.toFixed(1) + ' WPM' : 'N/A'}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Phoneme Analysis Section
+      html += `
+        <div class="card">
+          <h2>Phoneme Analysis (Rule-Based)</h2>
+          <div class="metric-row">
+            <div class="metric-box per">
+              <div class="metric-number">${rec.per != null ? (rec.per * 100).toFixed(1) + '%' : 'N/A'}</div>
+              <div class="metric-name">Phoneme Error Rate</div>
+            </div>
+            <div class="metric-box wer">
+              <div class="metric-number">${rec.total_phonemes || 'N/A'}</div>
+              <div class="metric-name">Total Phonemes</div>
+            </div>
+          </div>
+      `;
+
+      // Phoneme Errors Table
+      if (rec.phoneme_errors && rec.phoneme_errors.length > 0) {
+        html += `
+          <h3 style="margin: 20px 0 12px 0; font-size: 14px; color: #4a5568;">
+            Phoneme Errors (${rec.phoneme_errors.length})
+          </h3>
+          <table class="error-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Word</th>
+                <th>Expected</th>
+                <th>Actual</th>
+                <th>Position</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        rec.phoneme_errors.forEach(err => {
+          html += `
+            <tr>
+              <td><span class="error-type ${err.error_type}">${err.error_type}</span></td>
+              <td><strong>${err.word || '-'}</strong></td>
+              <td>/${err.expected_phoneme || '-'}/</td>
+              <td>/${err.actual_phoneme || '-'}/</td>
+              <td>${err.position != null ? err.position : '-'}</td>
+            </tr>
+          `;
+        });
+        html += '</tbody></table>';
+      } else {
+        html += '<div class="section-empty">No phoneme errors detected</div>';
+      }
+
+      // Problematic Phonemes
+      if (rec.problematic_phonemes && Object.keys(rec.problematic_phonemes).length > 0) {
+        html += `
+          <h3 style="margin: 20px 0 12px 0; font-size: 14px; color: #4a5568;">
+            Problematic Phonemes
+          </h3>
+          <div class="ml-phoneme-grid">
+        `;
+        Object.entries(rec.problematic_phonemes).forEach(([phoneme, count]) => {
+          html += `<span class="ml-phoneme bad">/${phoneme}/ (${count}x)</span>`;
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+
+      // ML Phoneme Analysis Section (if available)
+      if (rec.ml_per != null || rec.ml_gop != null) {
+        html += `
+          <div class="card">
+            <h2>ML Phoneme Analysis (Wav2Vec2)</h2>
+            <div class="metric-row">
+              <div class="metric-box per">
+                <div class="metric-number">${rec.ml_per != null ? (rec.ml_per * 100).toFixed(1) + '%' : 'N/A'}</div>
+                <div class="metric-name">ML Phoneme Error Rate</div>
+              </div>
+              <div class="metric-box gop">
+                <div class="metric-number">${rec.ml_gop != null ? rec.ml_gop.toFixed(2) : 'N/A'}</div>
+                <div class="metric-name">Goodness of Pronunciation</div>
+              </div>
+              <div class="metric-box fluency">
+                <div class="metric-number">${rec.ml_confidence != null ? (rec.ml_confidence * 100).toFixed(0) + '%' : 'N/A'}</div>
+                <div class="metric-name">Model Confidence</div>
+              </div>
+            </div>
+        `;
+
+        // ML Detected Phonemes
+        if (rec.ml_detected_phonemes && rec.ml_detected_phonemes.length > 0) {
+          html += `
+            <h3 style="margin: 20px 0 12px 0; font-size: 14px; color: #4a5568;">
+              Detected Phonemes
+            </h3>
+            <div class="ml-phoneme-grid">
+          `;
+          rec.ml_detected_phonemes.forEach(p => {
+            html += `<span class="ml-phoneme">${p}</span>`;
+          });
+          html += '</div>';
+        }
+
+        // ML Phoneme Scores
+        if (rec.ml_phoneme_scores && rec.ml_phoneme_scores.length > 0) {
+          html += `
+            <h3 style="margin: 20px 0 12px 0; font-size: 14px; color: #4a5568;">
+              Phoneme Scores
+            </h3>
+            <div class="ml-phoneme-grid">
+          `;
+          rec.ml_phoneme_scores.forEach(item => {
+            const score = item.score || item.gop || 0;
+            const cls = score > 0.7 ? 'good' : score > 0.4 ? 'warning' : 'bad';
+            html += `<span class="ml-phoneme ${cls}">/${item.phoneme}/ ${(score * 100).toFixed(0)}%</span>`;
+          });
+          html += '</div>';
+        }
+
+        html += '</div>';
+      }
+
+      // Fluency Analysis Section
+      html += `
+        <div class="card">
+          <h2>Fluency Analysis</h2>
+          <div class="metric-row">
+            <div class="metric-box fluency">
+              <div class="metric-number">${rec.fluency_percentage != null ? rec.fluency_percentage.toFixed(1) + '%' : 'N/A'}</div>
+              <div class="metric-name">Fluency Percentage</div>
+            </div>
+            <div class="metric-box lfr">
+              <div class="metric-number">${rec.longest_fluent_run != null ? rec.longest_fluent_run : 'N/A'}</div>
+              <div class="metric-name">Longest Fluent Run</div>
+            </div>
+            <div class="metric-box per">
+              <div class="metric-number">${rec.total_pauses != null ? rec.total_pauses : 'N/A'}</div>
+              <div class="metric-name">Total Pauses</div>
+            </div>
+            <div class="metric-box wer">
+              <div class="metric-number">${rec.dysfluencies_per_100_words != null ? rec.dysfluencies_per_100_words.toFixed(1) : 'N/A'}</div>
+              <div class="metric-name">Dysfluencies/100 Words</div>
+            </div>
+          </div>
+          <div class="metric-row" style="margin-top: 16px;">
+            <div class="metric-box gop">
+              <div class="metric-number">${rec.hesitation_count != null ? rec.hesitation_count : 'N/A'}</div>
+              <div class="metric-name">Hesitations</div>
+            </div>
+            <div class="metric-box per">
+              <div class="metric-number">${rec.block_count != null ? rec.block_count : 'N/A'}</div>
+              <div class="metric-name">Blocks</div>
+            </div>
+            <div class="metric-box lfr">
+              <div class="metric-number">${rec.pause_ratio != null ? (rec.pause_ratio * 100).toFixed(1) + '%' : 'N/A'}</div>
+              <div class="metric-name">Pause Ratio</div>
+            </div>
+            <div class="metric-box fluency">
+              <div class="metric-number">${rec.speech_rate_variability != null ? rec.speech_rate_variability.toFixed(2) : 'N/A'}</div>
+              <div class="metric-name">Speech Rate Variability</div>
+            </div>
+          </div>
+      `;
+
+      // Stuttering Events
+      if (rec.stuttering_events && rec.stuttering_events.length > 0) {
+        html += `
+          <h3 style="margin: 20px 0 12px 0; font-size: 14px; color: #4a5568;">
+            Stuttering Events (${rec.stuttering_events.length})
+          </h3>
+          <div>
+        `;
+        rec.stuttering_events.forEach(event => {
+          let details = `<span class="type">${event.event_type}</span>: "${event.word}"`;
+          if (event.repetition_count) details += ` (${event.repetition_count}x)`;
+          html += `<span class="stutter-event">${details}</span>`;
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+
+      // Clinical Notes Section
+      const allNotes = [];
+      if (rec.clinical_notes) allNotes.push(...rec.clinical_notes);
+      if (rec.fluency_notes) allNotes.push(...rec.fluency_notes);
+
+      if (allNotes.length > 0) {
+        html += `
+          <div class="card">
+            <h2>Clinical Notes</h2>
+        `;
+        allNotes.forEach(note => {
+          html += `<div class="clinical-note">${note}</div>`;
+        });
+        html += '</div>';
+      }
+
+      // Session Info
+      html += `
+        <div class="card">
+          <h2>Session Information</h2>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <div class="meta-label">Recording ID</div>
+              <div class="meta-value">${rec.id}</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Session ID</div>
+              <div class="meta-value" style="font-size: 12px; word-break: break-all;">${rec.session_id || 'N/A'}</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Object</div>
+              <div class="meta-value">${rec.object_name || 'N/A'}</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Created At</div>
+              <div class="meta-value">${new Date(rec.created_at).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('content').innerHTML = html;
+    }
+
+    // Load on page load
+    loadRecording();
+  </script>
+</body>
+</html>

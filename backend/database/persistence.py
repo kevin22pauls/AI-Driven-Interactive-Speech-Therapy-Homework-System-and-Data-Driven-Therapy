@@ -685,3 +685,46 @@ def list_generated_objects() -> List[str]:
         return []
     finally:
         db.close()
+
+
+def get_recording_by_id(recording_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Get a single recording with full analysis details.
+
+    Args:
+        recording_id: The database ID of the recording
+
+    Returns:
+        Dictionary with all recording data and parsed JSON fields, or None if not found
+    """
+    db = SessionLocal()
+    try:
+        sql = text("SELECT * FROM recordings WHERE id = :id")
+        row = db.execute(sql, {"id": recording_id}).fetchone()
+
+        if not row:
+            return None
+
+        recording = dict(row._mapping)
+
+        # Parse all JSON fields
+        json_fields = [
+            'phoneme_errors_json', 'problematic_phonemes_json', 'clinical_notes_json',
+            'stuttering_events_json', 'pauses_json', 'fluency_notes_json',
+            'ml_detected_phonemes_json', 'ml_detected_ipa_json',
+            'ml_alignment_json', 'ml_phoneme_scores_json'
+        ]
+
+        for field in json_fields:
+            if recording.get(field):
+                # Remove '_json' suffix to get clean field name
+                clean_name = field.replace('_json', '')
+                recording[clean_name] = json.loads(recording[field])
+
+        return recording
+
+    except Exception as e:
+        logger.error(f"Failed to get recording by ID {recording_id}: {e}", exc_info=True)
+        return None
+    finally:
+        db.close()

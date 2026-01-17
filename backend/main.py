@@ -52,3 +52,23 @@ def read_dashboard():
         return FileResponse(frontend_path)
     else:
         return {"message": "Dashboard page not found."}
+
+
+@app.get("/ar")
+def read_ar():
+    """Serve the AR interface for object detection and speech practice."""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "ar.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    else:
+        return {"message": "AR page not found."}
+
+
+@app.get("/analysis")
+def read_analysis():
+    """Serve the analysis page for viewing detailed recording results."""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "analysis.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    else:
+        return {"message": "Analysis page not found."}

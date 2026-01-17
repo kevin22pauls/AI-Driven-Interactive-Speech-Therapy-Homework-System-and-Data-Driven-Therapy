@@ -451,7 +451,7 @@
 
   <script>
     /* ======== CONFIG ======== */
-    const BACKEND = "http://127.0.0.1:8000";
+    const BACKEND = "http://127.0.0.1:8001";
     /* ======================== */
 
     let currentPatientId = null;
@@ -948,6 +948,15 @@
 
     function renderSessionDetails(container, rec) {
       let html = '<div style="margin-bottom: 16px;">';
+
+      // View Analysis Button
+      html += `<div style="margin-bottom: 16px;">
+        <a href="/analysis?recording_id=${rec.id}"
+           style="display: inline-block; padding: 10px 20px; background: #667eea; color: white;
+                  text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">
+          View Full Analysis
+        </a>
+      </div>`;
 
       // Full transcript
       html += `<h4 style="margin: 0 0 8px 0; font-size: 14px;">Full Transcript:</h4>`;

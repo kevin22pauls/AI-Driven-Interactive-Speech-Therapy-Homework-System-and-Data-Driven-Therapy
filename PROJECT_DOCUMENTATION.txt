@@ -26,7 +26,8 @@ STEP 1: PATIENT RECORDING SESSION
 --------------------------------------------------------------------------------
 When a patient starts a session:
 
-1. Patient opens the web interface (http://localhost:8000)
+OPTION A: Manual Recording Interface (recorder.html)
+1. Patient opens the web interface (http://localhost:8001)
 2. Optionally enters their Patient ID for longitudinal tracking
 3. Selects an object to practice (e.g., "bag", "cup", "phone")
    - Objects can be predefined or custom (LLM generates prompts for any object)
@@ -35,6 +36,22 @@ When a patient starts a session:
 6. Browser captures audio using MediaRecorder API (WebM format)
 7. Client-side VAD detects 900ms of silence → auto-stops recording
 8. Audio blob is sent to backend via POST /record
+
+OPTION B: AR Camera Interface (ar.html) - NEW!
+1. Patient opens the AR interface (http://localhost:8001/ar)
+2. Enters their Patient ID for session tracking
+3. Allows camera access (uses rear camera on mobile)
+4. Points camera at a real-world object
+5. Clicks "Detect Object" - YOLOv8 ML model identifies the object
+   - Uses YOLOv8n ONNX model running in-browser via ONNX Runtime Web
+   - Supports 80 COCO classes (bottle, cup, phone, book, etc.)
+   - Draws bounding box with confidence score on detected object
+6. Clicks "Generate Prompts" - System creates prompts for detected object
+7. Prompt overlay displays on camera feed
+8. Patient speaks their answer while recording (auto-starts)
+9. Audio auto-stops after 900ms silence or 8s timeout
+10. Clicks "Next Prompt" to cycle through prompts
+11. Clicks "New Object" to detect a different object
 
 
 STEP 2: AUDIO PREPROCESSING
@@ -393,18 +410,50 @@ STEP 10: THERAPIST DASHBOARD
 Visualizes patient progress:
 
 1. PATIENT SELECTION
-   - Dropdown to select patient by ID
-   - Loads all historical data
+   - Input patient ID to load data
+   - Loads all historical recordings and metrics
 
-2. PROGRESS CHARTS (Chart.js)
-   - PER/WPER over time (line chart)
-   - Fluency metrics trend
-   - Error type distribution (pie chart)
+2. METRIC CARDS
+   - Total Recordings count
+   - Average PER (Phoneme Error Rate)
+   - Average LFR (Longest Fluent Run)
+   - Average Fluency Percentage
 
-3. CLINICAL INSIGHTS
-   - Auto-generated observations
-   - Problematic phoneme identification
-   - Improvement suggestions
+3. PROGRESS CHARTS (Chart.js)
+   - LFR Trend over time (line chart)
+   - PER Trend over time (line chart)
+   - Most Problematic Phonemes (bar chart)
+   - Fluency Percentage Trend (line chart)
+
+4. CLINICAL INSIGHTS PANEL
+   - Auto-generated observations based on data trends
+   - LFR improvement/decline detection
+   - Focus areas (high-error phonemes)
+   - Fluency level assessment
+   - Object-specific performance comparison
+
+5. SESSIONS TABLE
+   - Expandable rows for each recording
+   - Shows: date, object, transcript, metrics
+   - "View Full Analysis" button → links to analysis.html
+
+
+STEP 11: DETAILED ANALYSIS PAGE (NEW)
+--------------------------------------------------------------------------------
+Standalone page for deep-dive analysis of individual recordings:
+
+1. ACCESS
+   - URL: /analysis?recording_id={id}
+   - Linked from dashboard "View Full Analysis" button
+
+2. SECTIONS DISPLAYED
+   - Transcript with prompt and expected answer
+   - Semantic Evaluation (classification + similarity score)
+   - Rule-Based Phoneme Analysis (PER, error table, problematic phonemes)
+   - ML Phoneme Analysis (PER_ML, GOP scores, detected phonemes)
+   - Fluency Analysis (LFR, pauses, SSI-4, stuttering events)
+   - Clinical Notes aggregation
+   - Session metadata
 
 
 ================================================================================
@@ -419,9 +468,20 @@ Visualizes patient progress:
 |  |  - Real-time silence detection (Web Audio API)                    |  |
 |  |  - Result visualization with phoneme error highlighting           |  |
 |  |                                                                    |  |
+|  |  ar.html - AR Object Detection + Speech Practice (NEW!)           |  |
+|  |  - YOLOv8 ONNX model for real-time object detection               |  |
+|  |  - Camera feed with bounding box overlay                          |  |
+|  |  - Integrated prompt generation and speech recording              |  |
+|  |  - Supports 80 COCO object classes                                |  |
+|  |                                                                    |  |
 |  |  dashboard.html - Therapist Progress Dashboard                    |  |
 |  |  - Patient progress visualization (Chart.js)                      |  |
 |  |  - Longitudinal metrics tracking                                  |  |
+|  |  - Clinical insights generation                                   |  |
+|  |                                                                    |  |
+|  |  analysis.html - Detailed Recording Analysis (NEW!)               |  |
+|  |  - Full analysis breakdown for individual recordings              |  |
+|  |  - Phoneme, semantic, fluency sections                            |  |
 |  +-------------------------------------------------------------------+  |
 +---------------------------------------------------------------------------+
                                     | HTTP POST /record
@@ -436,6 +496,9 @@ Visualizes patient progress:
 |  |    - /session/change-object - Switch object                       |  |
 |  |    - /record                - Upload & analyze audio              |  |
 |  |    - /generate-prompts      - LLM-powered prompt generation       |  |
+|  |    - /recording/{id}        - Get single recording details (NEW)  |  |
+|  |    - /ar                    - AR interface page (NEW)             |  |
+|  |    - /analysis              - Analysis page (NEW)                 |  |
 |  +-------------------------------------------------------------------+  |
 +---------------------------------------------------------------------------+
                                     |
@@ -703,12 +766,32 @@ Example report:
    [x] Interactive Chart.js visualizations
    [x] Clinical insights panel
    [x] Recent sessions table with expandable details
+   [x] "View Full Analysis" button linking to analysis page
 
 10. USER INTERFACE
     [x] Browser-based audio recording
     [x] Automatic silence detection (VAD)
     [x] Comprehensive result display
     [x] Session management
+
+11. AR OBJECT DETECTION INTERFACE (NEW!)
+    [x] YOLOv8n ONNX model for browser-based object detection
+    [x] ONNX Runtime Web for client-side ML inference
+    [x] Real-time camera feed with WebRTC
+    [x] Bounding box visualization with confidence scores
+    [x] Support for 80 COCO object classes
+    [x] Integrated prompt generation workflow
+    [x] Audio recording with auto-stop on silence
+    [x] Full-screen immersive therapy experience
+
+12. DETAILED ANALYSIS PAGE (NEW!)
+    [x] Standalone recording analysis viewer
+    [x] URL-based recording selection (?recording_id=X)
+    [x] Complete breakdown of all analysis metrics
+    [x] Phoneme error tables with clinical notes
+    [x] ML phoneme analysis with GOP scores
+    [x] Fluency analysis with SSI-4 severity
+    [x] Linked from dashboard for easy access
 
 
 ================================================================================
@@ -735,7 +818,10 @@ FRONTEND STACK:
       * MediaRecorder API (audio capture)
       * Web Audio API (silence detection)
       * Fetch API (HTTP communication)
+      * getUserMedia API (camera access for AR)
   - Chart.js for data visualization
+  - ONNX Runtime Web for browser-based ML inference
+  - YOLOv8n ONNX model (~13MB) for object detection
 
 AUDIO PROCESSING:
   - Supported formats: webm, wav, mp3, ogg, flac
@@ -813,6 +899,8 @@ FINAL PROJECT/
 |   +-- frontend/
 |   |   +-- recorder.html            # Patient recording interface
 |   |   +-- dashboard.html           # Therapist progress dashboard
+|   |   +-- ar.html                  # AR object detection + speech practice (NEW)
+|   |   +-- analysis.html            # Detailed recording analysis viewer (NEW)
 |   |
 |   +-- storage/
 |   |   +-- audio/                   # Audio recordings (gitignored)
@@ -910,6 +998,18 @@ GET /session/{session_id}/summary
   - Get session-level summary
   - Returns: Aggregated metrics for session
 
+GET /recording/{recording_id}
+  - Get single recording with full analysis details
+  - Returns: Complete recording data with parsed JSON fields
+
+GET /ollama/status
+  - Check if Ollama LLM service is available
+  - Returns: Status and available models
+
+GET /generated-objects
+  - List all objects with cached prompts
+  - Returns: List of object names
+
 
 ================================================================================
                     USAGE INSTRUCTIONS
@@ -931,11 +1031,14 @@ SETUP:
 
 4. Start the backend server:
    cd backend
-   uvicorn main:app --reload --port 8000
+   uvicorn main:app --reload --port 8001
 
-5. Open frontend:
-   http://localhost:8000 (Patient Interface)
-   http://localhost:8000/dashboard (Therapist Dashboard)
+5. Open frontend interfaces:
+   http://localhost:8001           - Patient Recording Interface
+   http://localhost:8001/recorder  - Patient Recording Interface (same)
+   http://localhost:8001/ar        - AR Object Detection + Speech Practice (NEW)
+   http://localhost:8001/dashboard - Therapist Progress Dashboard
+   http://localhost:8001/analysis?recording_id=X - Detailed Analysis (NEW)
 
 
 ================================================================================
@@ -952,6 +1055,8 @@ This system enables research on:
 6. Fluency disorder progression with VAD-based metrics
 7. SSI-4 validation with automated scoring
 8. Multi-modal speech assessment (acoustic + linguistic)
+9. AR-enhanced speech therapy interventions (NEW)
+10. Edge ML for accessible therapy tools (browser-based object detection)
 
 
 ================================================================================
@@ -1000,12 +1105,14 @@ This system uses the following open-source tools:
 - phonemizer + espeak-ng
 - Ollama (local LLM runtime)
 - FastAPI, Chart.js
+- YOLOv8 (Ultralytics) - Object Detection
+- ONNX Runtime Web - Browser ML Inference
 
 
-Last Updated: January 16, 2026
-Version: 4.1.0
-Status: Research MVP with ML-Powered Analysis
-Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | Position-based Paraphasia
+Last Updated: January 17, 2026
+Version: 5.0.0
+Status: Research MVP with ML-Powered Analysis + AR Object Detection
+Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | YOLOv8 AR Detection | Analysis Page
 
 ================================================================================
                           END OF DOCUMENTATION

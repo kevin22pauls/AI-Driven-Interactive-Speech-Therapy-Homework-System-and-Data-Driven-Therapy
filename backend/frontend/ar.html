@@ -1,0 +1,1046 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AR Speech Therapy - Object Detection</title>
+  <!-- ONNX Runtime Web for YOLOv8 -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #000;
+      color: white;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Camera container - full screen */
+    .camera-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* Top bar with patient ID */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 15px 20px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .top-bar label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .top-bar input {
+      flex: 1;
+      max-width: 250px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 14px;
+    }
+
+    .top-bar input::placeholder {
+      color: rgba(255,255,255,0.6);
+    }
+
+    .top-bar input:focus {
+      outline: none;
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Prompt overlay */
+    .prompt-overlay {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(102, 126, 234, 0.95);
+      padding: 16px 24px;
+      border-radius: 12px;
+      max-width: 90%;
+      text-align: center;
+      z-index: 10;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: none;
+    }
+
+    .prompt-overlay.show {
+      display: block;
+    }
+
+    .prompt-overlay .prompt-type {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
+
+    .prompt-overlay .prompt-text {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .prompt-overlay .prompt-counter {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-top: 8px;
+    }
+
+    /* Status bar */
+    .status-bar {
+      position: absolute;
+      bottom: 140px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-bar .recording-indicator {
+      width: 12px;
+      height: 12px;
+      background: #e74c3c;
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+      display: none;
+    }
+
+    .status-bar.recording .recording-indicator {
+      display: block;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Detected object badge */
+    .detected-object {
+      position: absolute;
+      bottom: 200px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(46, 204, 113, 0.9);
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 18px;
+      font-weight: 600;
+      z-index: 10;
+      display: none;
+    }
+
+    .detected-object.show {
+      display: block;
+    }
+
+    /* Control buttons */
+    .controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 20px;
+      background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .btn {
+      padding: 14px 24px;
+      border: none;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #5568d3;
+    }
+
+    .btn-success {
+      background: #2ecc71;
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #27ae60;
+    }
+
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #c0392b;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Success checkmark */
+    .success-check {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      background: rgba(46, 204, 113, 0.9);
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      z-index: 20;
+      animation: scaleIn 0.3s ease-out;
+    }
+
+    .success-check.show {
+      display: flex;
+    }
+
+    @keyframes scaleIn {
+      from { transform: translate(-50%, -50%) scale(0); }
+      to { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    /* Camera permission error */
+    .error-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      z-index: 100;
+    }
+
+    .error-overlay.hidden {
+      display: none;
+    }
+
+    .error-overlay h2 {
+      margin-bottom: 10px;
+      color: #e74c3c;
+    }
+
+    .error-overlay p {
+      color: #aaa;
+      margin-bottom: 20px;
+    }
+
+    /* Dashboard link */
+    .dashboard-link {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 20px;
+      z-index: 10;
+    }
+
+    .dashboard-link:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Progress bar for model loading */
+    .progress-container {
+      width: 200px;
+      height: 6px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
+      margin-top: 15px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: #667eea;
+      width: 0%;
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingText">Loading YOLOv8 model...</div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <!-- Error overlay -->
+  <div class="error-overlay hidden" id="errorOverlay">
+    <h2>Camera Access Required</h2>
+    <p id="errorMessage">Please allow camera access to use the AR feature.</p>
+    <button class="btn btn-primary" onclick="location.reload()">Try Again</button>
+  </div>
+
+  <!-- Main camera container -->
+  <div class="camera-container">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <label for="patientId">Patient:</label>
+      <input type="text" id="patientId" placeholder="Enter patient ID" autocomplete="off" />
+    </div>
+
+    <a href="/dashboard" class="dashboard-link">Dashboard</a>
+
+    <!-- Prompt overlay -->
+    <div class="prompt-overlay" id="promptOverlay">
+      <div class="prompt-type" id="promptType">Question</div>
+      <div class="prompt-text" id="promptText">What is this object?</div>
+      <div class="prompt-counter" id="promptCounter">Prompt 1 of 5</div>
+    </div>
+
+    <!-- Detected object badge -->
+    <div class="detected-object" id="detectedObject">bottle (95%)</div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="statusBar">
+      <div class="recording-indicator"></div>
+      <span id="statusText">Point camera at an object</span>
+    </div>
+
+    <!-- Success checkmark -->
+    <div class="success-check" id="successCheck">&#10003;</div>
+
+    <!-- Control buttons -->
+    <div class="controls">
+      <button class="btn btn-primary" id="detectBtn" disabled>Detect Object</button>
+      <button class="btn btn-success" id="generateBtn" disabled>Generate Prompts</button>
+      <button class="btn btn-danger" id="recordBtn" disabled>Start Recording</button>
+      <button class="btn btn-secondary" id="nextBtn" disabled>Next Prompt</button>
+      <button class="btn btn-secondary" id="newObjectBtn" disabled>New Object</button>
+    </div>
+  </div>
+
+  <script>
+    /* ======== CONFIG ======== */
+    const BACKEND = "http://127.0.0.1:8001";
+    const SILENCE_TIMEOUT_MS = 900;
+    const MAX_RECORDING_MS = 8000;
+    const MODEL_URL = "https://hyuto.github.io/yolov8-onnxruntime-web/model/yolov8n.onnx";
+    const MODEL_INPUT_SIZE = 640;
+    const CONFIDENCE_THRESHOLD = 0.25;
+    const IOU_THRESHOLD = 0.45;
+    /* ======================== */
+
+    // COCO class names (80 classes)
+    const COCO_CLASSES = [
+      'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
+      'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat',
+      'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack',
+      'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
+      'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+      'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+      'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair',
+      'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse',
+      'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator',
+      'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
+    ];
+
+    // DOM Elements
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
+    const progressBar = document.getElementById('progressBar');
+    const errorOverlay = document.getElementById('errorOverlay');
+    const errorMessage = document.getElementById('errorMessage');
+    const promptOverlay = document.getElementById('promptOverlay');
+    const promptType = document.getElementById('promptType');
+    const promptText = document.getElementById('promptText');
+    const promptCounter = document.getElementById('promptCounter');
+    const detectedObjectEl = document.getElementById('detectedObject');
+    const statusBar = document.getElementById('statusBar');
+    const statusText = document.getElementById('statusText');
+    const successCheck = document.getElementById('successCheck');
+    const patientIdInput = document.getElementById('patientId');
+
+    // Buttons
+    const detectBtn = document.getElementById('detectBtn');
+    const generateBtn = document.getElementById('generateBtn');
+    const recordBtn = document.getElementById('recordBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const newObjectBtn = document.getElementById('newObjectBtn');
+
+    // State
+    let yoloSession = null;
+    let currentObject = null;
+    let generatedPrompts = null;
+    let session = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioContext, analyser, sourceNode;
+    let silenceTimeout = null;
+    let isRecording = false;
+
+    // Initialize
+    async function init() {
+      try {
+        // Load YOLOv8 ONNX model
+        loadingText.textContent = 'Loading YOLOv8 model (13MB)...';
+        progressBar.style.width = '10%';
+
+        // Configure ONNX Runtime
+        ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/';
+
+        yoloSession = await ort.InferenceSession.create(MODEL_URL, {
+          executionProviders: ['wasm'],
+          graphOptimizationLevel: 'all'
+        });
+
+        progressBar.style.width = '70%';
+        loadingText.textContent = 'Initializing camera...';
+
+        // Request camera
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+
+        video.srcObject = stream;
+        await video.play();
+
+        // Set canvas size to match video
+        video.addEventListener('loadedmetadata', () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        });
+
+        progressBar.style.width = '100%';
+
+        // Hide loading, enable detect button
+        setTimeout(() => {
+          loadingOverlay.classList.add('hidden');
+          detectBtn.disabled = false;
+          statusText.textContent = 'Ready! Point camera at an object';
+        }, 300);
+
+      } catch (error) {
+        console.error('Initialization error:', error);
+        loadingOverlay.classList.add('hidden');
+        errorOverlay.classList.remove('hidden');
+
+        if (error.name === 'NotAllowedError') {
+          errorMessage.textContent = 'Camera permission denied. Please allow camera access and reload.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage.textContent = 'No camera found. Please connect a camera and reload.';
+        } else {
+          errorMessage.textContent = `Error: ${error.message}`;
+        }
+      }
+    }
+
+    // Preprocess image for YOLOv8
+    function preprocessImage() {
+      // Create temporary canvas for preprocessing
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = MODEL_INPUT_SIZE;
+      tempCanvas.height = MODEL_INPUT_SIZE;
+      const tempCtx = tempCanvas.getContext('2d');
+
+      // Draw video frame resized to 640x640
+      tempCtx.drawImage(video, 0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+
+      // Get image data
+      const imageData = tempCtx.getImageData(0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+      const { data } = imageData;
+
+      // Convert to float32 and normalize to [0, 1]
+      // YOLOv8 expects NCHW format: [1, 3, 640, 640]
+      const red = new Float32Array(MODEL_INPUT_SIZE * MODEL_INPUT_SIZE);
+      const green = new Float32Array(MODEL_INPUT_SIZE * MODEL_INPUT_SIZE);
+      const blue = new Float32Array(MODEL_INPUT_SIZE * MODEL_INPUT_SIZE);
+
+      for (let i = 0; i < MODEL_INPUT_SIZE * MODEL_INPUT_SIZE; i++) {
+        red[i] = data[i * 4] / 255.0;
+        green[i] = data[i * 4 + 1] / 255.0;
+        blue[i] = data[i * 4 + 2] / 255.0;
+      }
+
+      // Combine into single array [R, G, B]
+      const inputTensor = new Float32Array(3 * MODEL_INPUT_SIZE * MODEL_INPUT_SIZE);
+      inputTensor.set(red, 0);
+      inputTensor.set(green, MODEL_INPUT_SIZE * MODEL_INPUT_SIZE);
+      inputTensor.set(blue, 2 * MODEL_INPUT_SIZE * MODEL_INPUT_SIZE);
+
+      return new ort.Tensor('float32', inputTensor, [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
+    }
+
+    // Non-Maximum Suppression
+    function nms(boxes, scores, iouThreshold) {
+      const indices = [];
+      const sortedIndices = scores
+        .map((score, idx) => ({ score, idx }))
+        .sort((a, b) => b.score - a.score)
+        .map(item => item.idx);
+
+      while (sortedIndices.length > 0) {
+        const current = sortedIndices.shift();
+        indices.push(current);
+
+        const currentBox = boxes[current];
+        const remaining = [];
+
+        for (const idx of sortedIndices) {
+          const iou = calculateIoU(currentBox, boxes[idx]);
+          if (iou < iouThreshold) {
+            remaining.push(idx);
+          }
+        }
+
+        sortedIndices.length = 0;
+        sortedIndices.push(...remaining);
+      }
+
+      return indices;
+    }
+
+    // Calculate IoU between two boxes
+    function calculateIoU(box1, box2) {
+      const x1 = Math.max(box1[0], box2[0]);
+      const y1 = Math.max(box1[1], box2[1]);
+      const x2 = Math.min(box1[2], box2[2]);
+      const y2 = Math.min(box1[3], box2[3]);
+
+      const intersection = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+      const area1 = (box1[2] - box1[0]) * (box1[3] - box1[1]);
+      const area2 = (box2[2] - box2[0]) * (box2[3] - box2[1]);
+      const union = area1 + area2 - intersection;
+
+      return intersection / union;
+    }
+
+    // Process YOLOv8 output
+    function processOutput(output) {
+      const data = output.data;
+      const numDetections = output.dims[2]; // 8400 detections
+      const numClasses = output.dims[1] - 4; // 80 classes
+
+      const boxes = [];
+      const scores = [];
+      const classIds = [];
+
+      for (let i = 0; i < numDetections; i++) {
+        // Get box coordinates (cx, cy, w, h)
+        const cx = data[0 * numDetections + i];
+        const cy = data[1 * numDetections + i];
+        const w = data[2 * numDetections + i];
+        const h = data[3 * numDetections + i];
+
+        // Convert to x1, y1, x2, y2
+        const x1 = cx - w / 2;
+        const y1 = cy - h / 2;
+        const x2 = cx + w / 2;
+        const y2 = cy + h / 2;
+
+        // Find best class
+        let maxScore = 0;
+        let maxClassId = 0;
+        for (let c = 0; c < numClasses; c++) {
+          const score = data[(4 + c) * numDetections + i];
+          if (score > maxScore) {
+            maxScore = score;
+            maxClassId = c;
+          }
+        }
+
+        if (maxScore >= CONFIDENCE_THRESHOLD) {
+          boxes.push([x1, y1, x2, y2]);
+          scores.push(maxScore);
+          classIds.push(maxClassId);
+        }
+      }
+
+      // Apply NMS
+      const nmsIndices = nms(boxes, scores, IOU_THRESHOLD);
+
+      return nmsIndices.map(idx => ({
+        box: boxes[idx],
+        score: scores[idx],
+        classId: classIds[idx],
+        className: COCO_CLASSES[classIds[idx]]
+      }));
+    }
+
+    // Detect object in current frame
+    async function detectObject() {
+      if (!yoloSession) return;
+
+      detectBtn.disabled = true;
+      statusText.textContent = 'Detecting objects...';
+
+      try {
+        // Preprocess
+        const inputTensor = preprocessImage();
+
+        // Run inference
+        const feeds = { images: inputTensor };
+        const results = await yoloSession.run(feeds);
+
+        // Get output (YOLOv8 output name is 'output0')
+        const output = results.output0;
+
+        // Process detections
+        const detections = processOutput(output);
+
+        // Clear previous drawings
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (detections.length === 0) {
+          statusText.textContent = 'No objects detected. Try again!';
+          detectBtn.disabled = false;
+          return;
+        }
+
+        // Get highest confidence detection (excluding 'person' if others exist)
+        let best = detections[0];
+        const nonPersonDetections = detections.filter(d => d.className !== 'person');
+        if (nonPersonDetections.length > 0) {
+          best = nonPersonDetections.reduce((a, b) => a.score > b.score ? a : b);
+        }
+
+        currentObject = best.className;
+
+        // Draw bounding box
+        drawDetection(best);
+
+        // Show detected object
+        detectedObjectEl.textContent = `${best.className} (${(best.score * 100).toFixed(0)}%)`;
+        detectedObjectEl.classList.add('show');
+
+        statusText.textContent = `Detected: ${best.className}`;
+        detectBtn.disabled = false;
+        generateBtn.disabled = false;
+
+      } catch (error) {
+        console.error('Detection error:', error);
+        statusText.textContent = 'Detection failed. Try again!';
+        detectBtn.disabled = false;
+      }
+    }
+
+    // Draw detection bounding box
+    function drawDetection(detection) {
+      const [x1, y1, x2, y2] = detection.box;
+
+      // Scale from 640x640 to actual video size
+      const scaleX = canvas.width / MODEL_INPUT_SIZE;
+      const scaleY = canvas.height / MODEL_INPUT_SIZE;
+
+      const scaledX1 = x1 * scaleX;
+      const scaledY1 = y1 * scaleY;
+      const scaledX2 = x2 * scaleX;
+      const scaledY2 = y2 * scaleY;
+
+      // Draw box
+      ctx.strokeStyle = '#2ecc71';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(scaledX1, scaledY1, scaledX2 - scaledX1, scaledY2 - scaledY1);
+
+      // Draw label background
+      ctx.fillStyle = '#2ecc71';
+      const label = `${detection.className} ${(detection.score * 100).toFixed(0)}%`;
+      ctx.font = 'bold 16px Arial';
+      const textWidth = ctx.measureText(label).width;
+      ctx.fillRect(scaledX1, scaledY1 - 25, textWidth + 10, 25);
+
+      // Draw label text
+      ctx.fillStyle = 'white';
+      ctx.fillText(label, scaledX1 + 5, scaledY1 - 7);
+    }
+
+    // Generate prompts for detected object
+    async function generatePrompts() {
+      if (!currentObject) return;
+
+      generateBtn.disabled = true;
+      statusText.textContent = `Generating prompts for "${currentObject}"...`;
+
+      try {
+        const formData = new FormData();
+        formData.append('object_name', currentObject);
+
+        const response = await fetch(`${BACKEND}/generate-prompts`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) throw new Error('Failed to generate prompts');
+
+        generatedPrompts = await response.json();
+
+        // Create session
+        let patientId = patientIdInput.value.trim();
+        if (!patientId) {
+          patientId = 'ar_' + Date.now();
+          patientIdInput.value = patientId;
+        }
+        patientIdInput.disabled = true;
+
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substr(2, 9);
+        session = {
+          session_id: `${patientId}_${timestamp}_${randomStr}`,
+          object: currentObject,
+          used_prompts: [],
+          current_prompt_index: -1
+        };
+
+        // Show first prompt
+        showNextPrompt();
+
+        statusText.textContent = 'Prompts ready! Click "Start Recording"';
+        recordBtn.disabled = false;
+        nextBtn.disabled = false;
+        newObjectBtn.disabled = false;
+        detectBtn.disabled = true;
+        generateBtn.disabled = true;
+
+      } catch (error) {
+        console.error('Generate prompts error:', error);
+        statusText.textContent = 'Failed to generate prompts. Try again!';
+        generateBtn.disabled = false;
+      }
+    }
+
+    // Show next prompt
+    function showNextPrompt() {
+      if (!generatedPrompts || !session) return;
+
+      // Get all prompts
+      const allPrompts = [];
+      generatedPrompts.questions.forEach(q => {
+        allPrompts.push({ text: q.text, type: 'question', expected: q.expected_answers[0] });
+      });
+      generatedPrompts.sentences.forEach(s => {
+        allPrompts.push({ text: s.text, type: 'sentence', expected: s.text });
+      });
+
+      // Filter unused
+      const available = allPrompts.filter(p => !session.used_prompts.includes(p.text));
+
+      if (available.length === 0) {
+        session.used_prompts = [];
+        statusText.textContent = 'All prompts done! Starting over...';
+        showNextPrompt();
+        return;
+      }
+
+      // Pick random
+      const prompt = available[Math.floor(Math.random() * available.length)];
+      session.used_prompts.push(prompt.text);
+      session.current_prompt = prompt;
+
+      // Update UI
+      promptType.textContent = prompt.type === 'question' ? 'Question' : 'Repeat This';
+      promptText.textContent = prompt.text;
+      promptCounter.textContent = `Prompt ${session.used_prompts.length} of ${allPrompts.length}`;
+      promptOverlay.classList.add('show');
+
+      recordBtn.disabled = false;
+    }
+
+    // Start recording
+    async function startRecording() {
+      if (isRecording) return;
+
+      recordBtn.disabled = true;
+      nextBtn.disabled = true;
+      isRecording = true;
+      audioChunks = [];
+
+      statusBar.classList.add('recording');
+      statusText.textContent = 'Recording... Speak now!';
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data && e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          statusBar.classList.remove('recording');
+          statusText.textContent = 'Processing...';
+
+          const blob = new Blob(audioChunks, { type: 'audio/webm' });
+          await uploadRecording(blob);
+
+          // Cleanup
+          stream.getTracks().forEach(track => track.stop());
+          isRecording = false;
+        };
+
+        // Setup VAD
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          sourceNode = audioContext.createMediaStreamSource(stream);
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 2048;
+          sourceNode.connect(analyser);
+          monitorSilence();
+        } catch (e) {
+          console.warn('VAD not available', e);
+        }
+
+        mediaRecorder.start();
+
+        // Auto-stop after max time
+        setTimeout(() => {
+          if (mediaRecorder && mediaRecorder.state === 'recording') {
+            stopRecording();
+          }
+        }, MAX_RECORDING_MS);
+
+      } catch (error) {
+        console.error('Recording error:', error);
+        statusBar.classList.remove('recording');
+        statusText.textContent = 'Microphone error. Try again!';
+        isRecording = false;
+        recordBtn.disabled = false;
+        nextBtn.disabled = false;
+      }
+    }
+
+    // Stop recording
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+      if (audioContext) {
+        try { audioContext.close(); } catch(e) {}
+        audioContext = null;
+        analyser = null;
+      }
+      if (silenceTimeout) {
+        clearTimeout(silenceTimeout);
+        silenceTimeout = null;
+      }
+    }
+
+    // Monitor silence for auto-stop
+    function monitorSilence() {
+      if (!analyser) return;
+
+      const bufferLength = analyser.fftSize;
+      const data = new Uint8Array(bufferLength);
+
+      const check = () => {
+        if (!analyser) return;
+
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const val = (data[i] - 128) / 128;
+          sum += val * val;
+        }
+        const rms = Math.sqrt(sum / bufferLength);
+
+        if (rms > 0.02) {
+          if (silenceTimeout) {
+            clearTimeout(silenceTimeout);
+            silenceTimeout = null;
+          }
+          silenceTimeout = setTimeout(() => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+              stopRecording();
+            }
+          }, SILENCE_TIMEOUT_MS);
+        }
+
+        requestAnimationFrame(check);
+      };
+
+      check();
+    }
+
+    // Upload recording
+    async function uploadRecording(blob) {
+      if (!session || !session.current_prompt) return;
+
+      const form = new FormData();
+      form.append('session_id', session.session_id);
+      form.append('object_name', session.object);
+      form.append('prompt_text', session.current_prompt.text);
+      form.append('expected_answer', session.current_prompt.expected || '');
+      form.append('audio', blob, 'recording.webm');
+
+      try {
+        const res = await fetch(`${BACKEND}/record`, { method: 'POST', body: form });
+
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
+
+        // Show success
+        successCheck.classList.add('show');
+        statusText.textContent = 'Recording saved!';
+
+        setTimeout(() => {
+          successCheck.classList.remove('show');
+          statusText.textContent = 'Click "Next Prompt" to continue';
+          recordBtn.disabled = false;
+          nextBtn.disabled = false;
+        }, 1500);
+
+      } catch (error) {
+        console.error('Upload error:', error);
+        statusText.textContent = 'Upload failed. Try again!';
+        recordBtn.disabled = false;
+        nextBtn.disabled = false;
+      }
+    }
+
+    // Reset for new object
+    function resetForNewObject() {
+      currentObject = null;
+      generatedPrompts = null;
+      session = null;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Reset UI
+      detectedObjectEl.classList.remove('show');
+      promptOverlay.classList.remove('show');
+      patientIdInput.disabled = false;
+
+      // Reset buttons
+      detectBtn.disabled = false;
+      generateBtn.disabled = true;
+      recordBtn.disabled = true;
+      nextBtn.disabled = true;
+      newObjectBtn.disabled = true;
+
+      statusText.textContent = 'Point camera at a new object';
+    }
+
+    // Event listeners
+    detectBtn.addEventListener('click', detectObject);
+    generateBtn.addEventListener('click', generatePrompts);
+    recordBtn.addEventListener('click', startRecording);
+    nextBtn.addEventListener('click', showNextPrompt);
+    newObjectBtn.addEventListener('click', resetForNewObject);
+
+    // Initialize on page load
+    init();
+  </script>
+</body>
+</html>

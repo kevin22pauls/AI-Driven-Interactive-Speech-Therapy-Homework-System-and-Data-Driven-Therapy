@@ -16,7 +16,8 @@ from database.persistence import (
     get_phoneme_trends,
     save_generated_prompts,
     get_cached_prompts,
-    list_generated_objects
+    list_generated_objects,
+    get_recording_by_id
 )
 import uuid
 import os
@@ -455,3 +456,36 @@ def get_ollama_status():
         "available": available,
         "message": "Ollama is running" if available else "Ollama not available (will use fallback prompts)"
     }
+
+
+@router.get("/recording/{recording_id}")
+def get_recording_details(recording_id: int):
+    """
+    Get a single recording with full analysis details.
+
+    This endpoint retrieves all data for a specific recording including:
+    - Transcript and metadata
+    - Semantic evaluation
+    - Phoneme analysis (rule-based and ML)
+    - Fluency analysis
+    - Clinical notes
+
+    Args:
+        recording_id: The database ID of the recording
+
+    Returns:
+        Full recording data with all analysis results
+    """
+    try:
+        recording = get_recording_by_id(recording_id)
+
+        if not recording:
+            raise HTTPException(status_code=404, detail="Recording not found")
+
+        return recording
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get recording {recording_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
