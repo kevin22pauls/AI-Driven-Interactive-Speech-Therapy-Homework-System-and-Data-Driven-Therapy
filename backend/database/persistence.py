@@ -63,6 +63,23 @@ def save_recording(
         # Support both old "per" and new "per_rule" field names
         per = phoneme_analysis.get("per_rule") or phoneme_analysis.get("per")
         total_phonemes = phoneme_analysis.get("total_phonemes")
+        wper = phoneme_analysis.get("wper")
+
+        # Extract enhanced phoneme analysis fields
+        phoneme_class_errors_json = None
+        if phoneme_analysis.get("phoneme_class_errors"):
+            phoneme_class_errors_json = json.dumps(phoneme_analysis["phoneme_class_errors"])
+
+        error_pattern_analysis_json = None
+        if phoneme_analysis.get("error_pattern_analysis"):
+            error_pattern_analysis_json = json.dumps(phoneme_analysis["error_pattern_analysis"])
+
+        # Multi-attempt / conduite d'approche
+        multi_attempt = phoneme_analysis.get("multi_attempt_result", {})
+        conduite_d_approche_detected = 1 if multi_attempt.get("conduite_d_approche") else 0
+        multi_attempt_analysis_json = None
+        if multi_attempt:
+            multi_attempt_analysis_json = json.dumps(multi_attempt)
 
         # Convert phoneme errors to JSON
         phoneme_errors_json = None
@@ -99,6 +116,12 @@ def save_recording(
         if ml_analysis.get("phoneme_scores"):
             ml_phoneme_scores_json = json.dumps(ml_analysis["phoneme_scores"])
 
+        # Extract ML transcript (reconstructed from phonemes)
+        ml_transcript = ml_analysis.get("ml_transcript") or analysis_result.get("ml_transcript")
+        ml_transcript_details_json = None
+        if ml_analysis.get("ml_transcript_details"):
+            ml_transcript_details_json = json.dumps(ml_analysis["ml_transcript_details"])
+
         # Extract fluency analysis
         fluency_analysis = analysis_result.get("fluency_analysis", {})
         longest_fluent_run = fluency_analysis.get("longest_fluent_run")
@@ -109,6 +132,66 @@ def save_recording(
         dysfluencies_per_100_words = fluency_analysis.get("dysfluencies_per_100_words")
         dysfluencies_per_minute = fluency_analysis.get("dysfluencies_per_minute")
         speech_rate_variability = fluency_analysis.get("speech_rate_variability")
+
+        # Extract enhanced fluency metrics
+        lfr_with_tolerance = fluency_analysis.get("lfr_with_tolerance")
+        lfr_ratio = fluency_analysis.get("lfr_ratio")
+
+        # Extract pause metrics
+        pause_metrics = fluency_analysis.get("pause_metrics", {})
+        anomic_pause_count = pause_metrics.get("anomic_count", 0)
+        apraxic_pause_count = pause_metrics.get("apraxic_count", 0)
+        mean_pause_duration = pause_metrics.get("mean_pause_duration")
+
+        # Extract SSI-4 approximation metrics
+        ssi = fluency_analysis.get("ssi_approximation", {})
+        ssi_frequency_pct = ssi.get("frequency_pct")
+        ssi_frequency_score = ssi.get("frequency_score")
+        ssi_avg_duration = ssi.get("avg_duration")
+        ssi_duration_score = ssi.get("duration_score")
+        ssi_total_score = ssi.get("total_score")
+        ssi_severity = ssi.get("severity")
+
+        # Extract speech rate metrics
+        rate_metrics = fluency_analysis.get("speech_rate_metrics", {})
+        articulation_rate = rate_metrics.get("articulation_rate")
+        speaking_rate = rate_metrics.get("speaking_rate")
+        pause_adjusted_rate = rate_metrics.get("pause_adjusted_rate")
+        phonation_time = rate_metrics.get("phonation_time")
+        phonation_ratio = rate_metrics.get("phonation_ratio")
+        pathological_pause_ratio = rate_metrics.get("pathological_pause_ratio")
+
+        # Extract rate variability metrics
+        rate_var = fluency_analysis.get("rate_variability", {})
+        local_cv = rate_var.get("local_cv")
+        global_cv = rate_var.get("global_cv")
+        normalized_pvi = rate_var.get("normalized_pvi")
+        rate_trend = rate_var.get("global_trend")
+
+        # Extract fluency scores
+        fluency_scores = fluency_analysis.get("fluency_scores", {})
+        standard_fluency_pct = fluency_scores.get("standard_fluency_pct")
+        weighted_fluency_pct = fluency_scores.get("weighted_fluency_pct")
+        clinical_fluency_pct = fluency_scores.get("clinical_fluency_pct")
+        dysfluency_profile_json = None
+        if fluency_scores.get("dysfluency_profile"):
+            dysfluency_profile_json = json.dumps(fluency_scores["dysfluency_profile"])
+
+        # Extract enhanced semantic analysis
+        semantic_eval = analysis_result.get("semantic_evaluation", {})
+        direct_similarity = semantic_eval.get("direct_similarity")
+        category_similarity = semantic_eval.get("category_similarity")
+        circumlocution_detected = 1 if semantic_eval.get("circumlocution_detected") else 0
+        circumlocution_features_json = None
+        if semantic_eval.get("circumlocution_result"):
+            circumlocution_features_json = json.dumps(semantic_eval["circumlocution_result"])
+        semantic_paraphasia_json = None
+        if semantic_eval.get("paraphasia_analysis"):
+            semantic_paraphasia_json = json.dumps(semantic_eval["paraphasia_analysis"])
+
+        # Analysis metadata
+        analysis_mode = analysis_result.get("analysis_mode", "standard")
+        disorder_type = analysis_result.get("disorder_type", "aphasia")
 
         # Convert fluency data to JSON
         stuttering_events_json = None
@@ -129,24 +212,44 @@ def save_recording(
                 session_id, object_name, prompt_text, expected_answer, audio_path,
                 transcript, wer, speech_rate, pause_ratio,
                 per, total_phonemes, phoneme_errors_json, problematic_phonemes_json, clinical_notes_json,
+                wper, phoneme_class_errors_json, error_pattern_analysis_json,
+                conduite_d_approche_detected, multi_attempt_analysis_json,
                 ml_per, ml_gop, ml_confidence, ml_detected_phonemes_json, ml_detected_ipa_json,
-                ml_alignment_json, ml_phoneme_scores_json,
+                ml_alignment_json, ml_phoneme_scores_json, ml_transcript, ml_transcript_details_json,
                 semantic_classification, semantic_score,
+                direct_similarity, category_similarity, circumlocution_detected,
+                circumlocution_features_json, semantic_paraphasia_json,
                 longest_fluent_run, total_pauses, hesitation_count, block_count,
                 fluency_percentage, dysfluencies_per_100_words, dysfluencies_per_minute,
                 speech_rate_variability, stuttering_events_json, pauses_json, fluency_notes_json,
-                created_at
+                lfr_with_tolerance, lfr_ratio, anomic_pause_count, apraxic_pause_count, mean_pause_duration,
+                articulation_rate, speaking_rate, pause_adjusted_rate, phonation_time, phonation_ratio,
+                pathological_pause_ratio, local_cv, global_cv, normalized_pvi, rate_trend,
+                ssi_frequency_pct, ssi_frequency_score, ssi_avg_duration, ssi_duration_score,
+                ssi_total_score, ssi_severity,
+                standard_fluency_pct, weighted_fluency_pct, clinical_fluency_pct, dysfluency_profile_json,
+                analysis_mode, disorder_type, created_at
             ) VALUES (
                 :session_id, :object_name, :prompt_text, :expected_answer, :audio_path,
                 :transcript, :wer, :speech_rate, :pause_ratio,
                 :per, :total_phonemes, :phoneme_errors_json, :problematic_phonemes_json, :clinical_notes_json,
+                :wper, :phoneme_class_errors_json, :error_pattern_analysis_json,
+                :conduite_d_approche_detected, :multi_attempt_analysis_json,
                 :ml_per, :ml_gop, :ml_confidence, :ml_detected_phonemes_json, :ml_detected_ipa_json,
-                :ml_alignment_json, :ml_phoneme_scores_json,
+                :ml_alignment_json, :ml_phoneme_scores_json, :ml_transcript, :ml_transcript_details_json,
                 :semantic_classification, :semantic_score,
+                :direct_similarity, :category_similarity, :circumlocution_detected,
+                :circumlocution_features_json, :semantic_paraphasia_json,
                 :longest_fluent_run, :total_pauses, :hesitation_count, :block_count,
                 :fluency_percentage, :dysfluencies_per_100_words, :dysfluencies_per_minute,
                 :speech_rate_variability, :stuttering_events_json, :pauses_json, :fluency_notes_json,
-                :created_at
+                :lfr_with_tolerance, :lfr_ratio, :anomic_pause_count, :apraxic_pause_count, :mean_pause_duration,
+                :articulation_rate, :speaking_rate, :pause_adjusted_rate, :phonation_time, :phonation_ratio,
+                :pathological_pause_ratio, :local_cv, :global_cv, :normalized_pvi, :rate_trend,
+                :ssi_frequency_pct, :ssi_frequency_score, :ssi_avg_duration, :ssi_duration_score,
+                :ssi_total_score, :ssi_severity,
+                :standard_fluency_pct, :weighted_fluency_pct, :clinical_fluency_pct, :dysfluency_profile_json,
+                :analysis_mode, :disorder_type, :created_at
             )
         """)
 
@@ -165,6 +268,11 @@ def save_recording(
             "phoneme_errors_json": phoneme_errors_json,
             "problematic_phonemes_json": problematic_phonemes_json,
             "clinical_notes_json": clinical_notes_json,
+            "wper": wper,
+            "phoneme_class_errors_json": phoneme_class_errors_json,
+            "error_pattern_analysis_json": error_pattern_analysis_json,
+            "conduite_d_approche_detected": conduite_d_approche_detected,
+            "multi_attempt_analysis_json": multi_attempt_analysis_json,
             "ml_per": ml_per,
             "ml_gop": ml_gop,
             "ml_confidence": ml_confidence,
@@ -172,8 +280,15 @@ def save_recording(
             "ml_detected_ipa_json": ml_detected_ipa_json,
             "ml_alignment_json": ml_alignment_json,
             "ml_phoneme_scores_json": ml_phoneme_scores_json,
+            "ml_transcript": ml_transcript,
+            "ml_transcript_details_json": ml_transcript_details_json,
             "semantic_classification": semantic_classification,
             "semantic_score": semantic_score,
+            "direct_similarity": direct_similarity,
+            "category_similarity": category_similarity,
+            "circumlocution_detected": circumlocution_detected,
+            "circumlocution_features_json": circumlocution_features_json,
+            "semantic_paraphasia_json": semantic_paraphasia_json,
             "longest_fluent_run": longest_fluent_run,
             "total_pauses": total_pauses,
             "hesitation_count": hesitation_count,
@@ -185,6 +300,33 @@ def save_recording(
             "stuttering_events_json": stuttering_events_json,
             "pauses_json": pauses_json,
             "fluency_notes_json": fluency_notes_json,
+            "lfr_with_tolerance": lfr_with_tolerance,
+            "lfr_ratio": lfr_ratio,
+            "anomic_pause_count": anomic_pause_count,
+            "apraxic_pause_count": apraxic_pause_count,
+            "mean_pause_duration": mean_pause_duration,
+            "articulation_rate": articulation_rate,
+            "speaking_rate": speaking_rate,
+            "pause_adjusted_rate": pause_adjusted_rate,
+            "phonation_time": phonation_time,
+            "phonation_ratio": phonation_ratio,
+            "pathological_pause_ratio": pathological_pause_ratio,
+            "local_cv": local_cv,
+            "global_cv": global_cv,
+            "normalized_pvi": normalized_pvi,
+            "rate_trend": rate_trend,
+            "ssi_frequency_pct": ssi_frequency_pct,
+            "ssi_frequency_score": ssi_frequency_score,
+            "ssi_avg_duration": ssi_avg_duration,
+            "ssi_duration_score": ssi_duration_score,
+            "ssi_total_score": ssi_total_score,
+            "ssi_severity": ssi_severity,
+            "standard_fluency_pct": standard_fluency_pct,
+            "weighted_fluency_pct": weighted_fluency_pct,
+            "clinical_fluency_pct": clinical_fluency_pct,
+            "dysfluency_profile_json": dysfluency_profile_json,
+            "analysis_mode": analysis_mode,
+            "disorder_type": disorder_type,
             "created_at": datetime.utcnow()
         })
 
@@ -687,6 +829,47 @@ def list_generated_objects() -> List[str]:
         db.close()
 
 
+def _compute_normative_levels(recording: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compute normative levels (below/normal/above) for key metrics.
+
+    These provide quick clinical interpretation of raw values.
+    """
+    # Articulation rate normative level
+    ar = recording.get('articulation_rate')
+    if ar is not None:
+        if ar >= 210:
+            recording['articulation_rate_normative_level'] = 'normal'
+        elif ar >= 150:
+            recording['articulation_rate_normative_level'] = 'below'
+        else:
+            recording['articulation_rate_normative_level'] = 'below'
+    else:
+        recording['articulation_rate_normative_level'] = 'unknown'
+
+    # WPER normative level
+    wper = recording.get('wper')
+    if wper is not None:
+        if wper < 0.15:
+            recording['wper_normative_level'] = 'normal'
+        else:
+            recording['wper_normative_level'] = 'below'
+    else:
+        recording['wper_normative_level'] = 'unknown'
+
+    # Fluency normative level (use weighted_fluency_pct or fluency_percentage)
+    fluency = recording.get('weighted_fluency_pct') or recording.get('fluency_percentage')
+    if fluency is not None:
+        if fluency >= 85:
+            recording['fluency_normative_level'] = 'normal'
+        else:
+            recording['fluency_normative_level'] = 'below'
+    else:
+        recording['fluency_normative_level'] = 'unknown'
+
+    return recording
+
+
 def get_recording_by_id(recording_id: int) -> Optional[Dict[str, Any]]:
     """
     Get a single recording with full analysis details.
@@ -712,7 +895,7 @@ def get_recording_by_id(recording_id: int) -> Optional[Dict[str, Any]]:
             'phoneme_errors_json', 'problematic_phonemes_json', 'clinical_notes_json',
             'stuttering_events_json', 'pauses_json', 'fluency_notes_json',
             'ml_detected_phonemes_json', 'ml_detected_ipa_json',
-            'ml_alignment_json', 'ml_phoneme_scores_json'
+            'ml_alignment_json', 'ml_phoneme_scores_json', 'ml_transcript_details_json'
         ]
 
         for field in json_fields:
@@ -720,6 +903,9 @@ def get_recording_by_id(recording_id: int) -> Optional[Dict[str, Any]]:
                 # Remove '_json' suffix to get clean field name
                 clean_name = field.replace('_json', '')
                 recording[clean_name] = json.loads(recording[field])
+
+        # Compute normative levels for clinical interpretation
+        recording = _compute_normative_levels(recording)
 
         return recording
 

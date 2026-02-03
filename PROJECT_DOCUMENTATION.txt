@@ -784,7 +784,7 @@ Example report:
     [x] Audio recording with auto-stop on silence
     [x] Full-screen immersive therapy experience
 
-12. DETAILED ANALYSIS PAGE (NEW!)
+12. DETAILED ANALYSIS PAGE
     [x] Standalone recording analysis viewer
     [x] URL-based recording selection (?recording_id=X)
     [x] Complete breakdown of all analysis metrics
@@ -792,6 +792,20 @@ Example report:
     [x] ML phoneme analysis with GOP scores
     [x] Fluency analysis with SSI-4 severity
     [x] Linked from dashboard for easy access
+
+13. APPLICATION LAUNCHER (NEW!)
+    [x] One-click server startup (launcher.py)
+    [x] Auto-restart if server already running
+    [x] Automatic browser launch to home page
+    [x] Port availability detection
+    [x] Process management (kill existing server on Windows)
+
+14. NAVIGATION HOME PAGE (NEW!)
+    [x] Central navigation hub (index.html)
+    [x] Card-based UI for all features
+    [x] Server status indicator
+    [x] Patient ID management
+    [x] Links to Recorder, AR, Dashboard, Analysis
 
 
 ================================================================================
@@ -827,7 +841,7 @@ AUDIO PROCESSING:
   - Supported formats: webm, wav, mp3, ogg, flac
   - PyAV for audio conversion (bundled FFmpeg)
   - Silero VAD for speech segment detection
-  - Auto-stop: 900ms silence or 8s timeout
+  - Auto-stop: 2000ms silence or 8s timeout
 
 KEY DEPENDENCIES:
   - fastapi, uvicorn
@@ -897,10 +911,11 @@ FINAL PROJECT/
 |   |   +-- audio_converter.py       # PyAV audio conversion
 |   |
 |   +-- frontend/
+|   |   +-- index.html               # Navigation home page (NEW!)
 |   |   +-- recorder.html            # Patient recording interface
 |   |   +-- dashboard.html           # Therapist progress dashboard
-|   |   +-- ar.html                  # AR object detection + speech practice (NEW)
-|   |   +-- analysis.html            # Detailed recording analysis viewer (NEW)
+|   |   +-- ar.html                  # AR object detection + speech practice
+|   |   +-- analysis.html            # Detailed recording analysis viewer
 |   |
 |   +-- storage/
 |   |   +-- audio/                   # Audio recordings (gitignored)
@@ -910,6 +925,7 @@ FINAL PROJECT/
 |       +-- test_fluency_analysis.py
 |       +-- test_persistence.py
 |
++-- launcher.py                      # One-click server launcher (NEW!)
 +-- docker-compose.yml               # Gentle service configuration
 +-- OLLAMA_SETUP.md                  # LLM installation guide
 +-- TESTING_GUIDE.md                 # Dashboard testing guide
@@ -1029,16 +1045,24 @@ SETUP:
 3. (Optional) Install Ollama for LLM prompts:
    See OLLAMA_SETUP.md
 
-4. Start the backend server:
+4. Start the backend server (choose one):
+
+   OPTION A: One-click launcher (recommended)
+   python launcher.py
+   - Automatically starts server on port 8001
+   - Opens browser to home page
+   - Restarts server if already running
+
+   OPTION B: Manual start
    cd backend
    uvicorn main:app --reload --port 8001
 
 5. Open frontend interfaces:
-   http://localhost:8001           - Patient Recording Interface
-   http://localhost:8001/recorder  - Patient Recording Interface (same)
-   http://localhost:8001/ar        - AR Object Detection + Speech Practice (NEW)
+   http://localhost:8001           - Navigation Home Page (NEW!)
+   http://localhost:8001/recorder  - Patient Recording Interface
+   http://localhost:8001/ar        - AR Object Detection + Speech Practice
    http://localhost:8001/dashboard - Therapist Progress Dashboard
-   http://localhost:8001/analysis?recording_id=X - Detailed Analysis (NEW)
+   http://localhost:8001/analysis?recording_id=X - Detailed Analysis
 
 
 ================================================================================
@@ -1109,10 +1133,10 @@ This system uses the following open-source tools:
 - ONNX Runtime Web - Browser ML Inference
 
 
-Last Updated: January 17, 2026
-Version: 5.0.0
+Last Updated: February 3, 2026
+Version: 5.1.0
 Status: Research MVP with ML-Powered Analysis + AR Object Detection
-Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | YOLOv8 AR Detection | Analysis Page
+Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | YOLOv8 AR Detection | Analysis Page | Launcher | Navigation Home
 
 ================================================================================
                           END OF DOCUMENTATION

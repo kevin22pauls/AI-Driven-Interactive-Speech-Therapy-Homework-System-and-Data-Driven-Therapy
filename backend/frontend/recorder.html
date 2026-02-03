@@ -399,7 +399,7 @@ function monitorSilence() {
         if (mediaRecorder && mediaRecorder.state === "recording") {
           stopRecording();
         }
-      }, 900); // stop after 900ms of silence
+      }, 2000); // stop after 2000ms of silence
     }
     requestAnimationFrame(check);
   };

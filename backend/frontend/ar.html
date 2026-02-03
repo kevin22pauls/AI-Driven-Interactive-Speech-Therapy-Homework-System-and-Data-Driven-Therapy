@@ -696,24 +696,21 @@
         // Get output (YOLOv8 output name is 'output0')
         const output = results.output0;
 
-        // Process detections
-        const detections = processOutput(output);
+        // Process detections - filter out 'person' completely
+        const allDetections = processOutput(output);
+        const detections = allDetections.filter(d => d.className !== 'person');
 
         // Clear previous drawings
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (detections.length === 0) {
-          statusText.textContent = 'No objects detected. Try again!';
+          statusText.textContent = 'No objects detected (excluding people). Try pointing at an object!';
           detectBtn.disabled = false;
           return;
         }
 
-        // Get highest confidence detection (excluding 'person' if others exist)
-        let best = detections[0];
-        const nonPersonDetections = detections.filter(d => d.className !== 'person');
-        if (nonPersonDetections.length > 0) {
-          best = nonPersonDetections.reduce((a, b) => a.score > b.score ? a : b);
-        }
+        // Get highest confidence detection
+        const best = detections.reduce((a, b) => a.score > b.score ? a : b);
 
         currentObject = best.className;
 

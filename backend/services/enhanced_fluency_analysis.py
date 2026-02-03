@@ -133,6 +133,7 @@ class SpeechRateMetrics:
     phonation_ratio: float  # Proportion of time spent speaking
     pathological_pause_ratio: float  # Ratio of pathological pauses
     normative_comparison: str  # Clinical interpretation
+    normative_level: str  # 'below', 'normal', 'above' for quick interpretation
 
 
 @dataclass
@@ -173,6 +174,7 @@ class WeightedFluencyScore:
     weighted_fluency_pct: float  # Severity-weighted
     clinical_fluency_pct: float  # Excludes normal dysfluencies
     dysfluency_profile: Dict[str, int]
+    normative_level: str  # 'below', 'normal', 'above' for quick interpretation
 
 
 @dataclass
@@ -461,7 +463,8 @@ def calculate_speech_rates(
         return SpeechRateMetrics(
             articulation_rate=0, speaking_rate=0, pause_adjusted_rate=0,
             phonation_time=0, total_duration=0, phonation_ratio=0,
-            pathological_pause_ratio=0, normative_comparison="Insufficient data"
+            pathological_pause_ratio=0, normative_comparison="Insufficient data",
+            normative_level="unknown"
         )
 
     total_duration = word_timings[-1]['end'] - word_timings[0]['start']
@@ -487,18 +490,23 @@ def calculate_speech_rates(
     phonation_ratio = phonation_time / total_duration if total_duration > 0 else 0
     pathological_ratio = pathological_time / total_duration if total_duration > 0 else 0
 
-    # Normative comparison
+    # Normative comparison with level classification
     ar = articulation_rate
     if ar >= 210:
         comparison = "Articulation rate within normal limits"
+        level = "normal"
     elif ar >= 150:
         comparison = "Mildly reduced articulation rate"
+        level = "below"
     elif ar >= 100:
         comparison = "Moderately reduced articulation rate - consistent with aphasia or apraxia"
+        level = "below"
     elif ar >= 60:
         comparison = "Severely reduced articulation rate - consistent with significant motor speech disorder"
+        level = "below"
     else:
         comparison = "Profoundly reduced articulation rate"
+        level = "below"
 
     return SpeechRateMetrics(
         articulation_rate=articulation_rate,
@@ -508,7 +516,8 @@ def calculate_speech_rates(
         total_duration=total_duration,
         phonation_ratio=phonation_ratio,
         pathological_pause_ratio=pathological_ratio,
-        normative_comparison=comparison
+        normative_comparison=comparison,
+        normative_level=level
     )
 
 
@@ -714,7 +723,8 @@ def calculate_weighted_fluency(
     if total_syllables == 0:
         return WeightedFluencyScore(
             standard_fluency_pct=100, weighted_fluency_pct=100,
-            clinical_fluency_pct=100, dysfluency_profile={}
+            clinical_fluency_pct=100, dysfluency_profile={},
+            normative_level="unknown"
         )
 
     # Count dysfluencies by type
@@ -744,11 +754,23 @@ def calculate_weighted_fluency(
     clinical_count = len(clinical_events) + len(clinical_pauses)
     clinical_fluency = 100 * (1 - clinical_count / total_syllables)
 
+    # Determine normative level based on weighted fluency percentage
+    wf = max(0, weighted_fluency)
+    if wf >= 95:
+        fluency_level = "normal"
+    elif wf >= 85:
+        fluency_level = "normal"  # Still within functional range
+    elif wf >= 70:
+        fluency_level = "below"
+    else:
+        fluency_level = "below"
+
     return WeightedFluencyScore(
         standard_fluency_pct=max(0, standard_fluency),
         weighted_fluency_pct=max(0, weighted_fluency),
         clinical_fluency_pct=max(0, clinical_fluency),
-        dysfluency_profile=profile
+        dysfluency_profile=profile,
+        normative_level=fluency_level
     )
 
 
@@ -1067,9 +1089,9 @@ def analyze_fluency_enhanced(
             pause_metrics=empty_pause_metrics,
             stuttering_events=[],
             ssi_approximation=StutteringSeverityIndex(0, 0, 0, 0, 0, 'normal', 50),
-            speech_rate_metrics=SpeechRateMetrics(0, 0, 0, 0, 0, 0, 0, "No speech"),
+            speech_rate_metrics=SpeechRateMetrics(0, 0, 0, 0, 0, 0, 0, "No speech", "unknown"),
             rate_variability=SpeechRateVariability(0, 0, 0, 0, 'stable', 0, 0, 0, 'insufficient_data'),
-            fluency_scores=WeightedFluencyScore(100, 100, 100, {}),
+            fluency_scores=WeightedFluencyScore(100, 100, 100, {}, "unknown"),
             total_words=0,
             total_syllables=0,
             total_duration=0,
@@ -1205,7 +1227,8 @@ def format_enhanced_fluency_result_for_api(result: EnhancedFluencyResult) -> Dic
             'phonation_time': round(result.speech_rate_metrics.phonation_time, 2),
             'phonation_ratio': round(result.speech_rate_metrics.phonation_ratio, 3),
             'pathological_pause_ratio': round(result.speech_rate_metrics.pathological_pause_ratio, 3),
-            'normative_comparison': result.speech_rate_metrics.normative_comparison
+            'normative_comparison': result.speech_rate_metrics.normative_comparison,
+            'normative_level': result.speech_rate_metrics.normative_level
         },
 
         # Rate variability
@@ -1224,7 +1247,8 @@ def format_enhanced_fluency_result_for_api(result: EnhancedFluencyResult) -> Dic
             'standard_fluency_pct': round(result.fluency_scores.standard_fluency_pct, 1),
             'weighted_fluency_pct': round(result.fluency_scores.weighted_fluency_pct, 1),
             'clinical_fluency_pct': round(result.fluency_scores.clinical_fluency_pct, 1),
-            'dysfluency_profile': result.fluency_scores.dysfluency_profile
+            'dysfluency_profile': result.fluency_scores.dysfluency_profile,
+            'normative_level': result.fluency_scores.normative_level
         },
 
         # Summary

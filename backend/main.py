@@ -28,8 +28,8 @@ app.include_router(analysis.router)
 
 @app.get("/")
 def read_root():
-    """Serve the frontend HTML file."""
-    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "recorder.html")
+    """Serve the landing page with navigation to all features."""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
     if os.path.exists(frontend_path):
         return FileResponse(frontend_path)
     else:

@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS recordings (
     ml_detected_ipa_json TEXT,  -- JSON array of detected phonemes (IPA)
     ml_alignment_json TEXT,  -- JSON array of (expected, detected) pairs
     ml_phoneme_scores_json TEXT,  -- JSON array of per-phoneme GOP scores
+    ml_transcript TEXT,  -- Raw transcript reconstructed from ML phonemes
+    ml_transcript_details_json TEXT,  -- JSON with word-by-word reconstruction
 
     -- Semantic evaluation
     semantic_classification TEXT,  -- 'correct', 'partial', 'wrong', 'circumlocution', 'semantic_paraphasia'

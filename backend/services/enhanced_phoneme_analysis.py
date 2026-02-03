@@ -98,6 +98,9 @@ class EnhancedPhonemeAnalysisResult:
     # Phoneme class breakdown
     phoneme_class_errors: Dict[str, int]
 
+    # Normative comparison
+    wper_normative_level: str = "unknown"  # 'below', 'normal', 'above'
+
 
 def get_deletion_weight(phoneme: str, word: str = "", position: int = 0) -> float:
     """
@@ -777,6 +780,16 @@ def analyze_phonemes_enhanced(
         wper, per, errors, pattern_analysis, multi_attempt_result
     )
 
+    # Determine normative level for WPER
+    if wper == 0:
+        wper_level = "normal"
+    elif wper < 0.15:
+        wper_level = "normal"  # Mild errors still functional
+    elif wper < 0.30:
+        wper_level = "below"
+    else:
+        wper_level = "below"  # Significant impairment
+
     return EnhancedPhonemeAnalysisResult(
         per_rule=per,
         wper=wper,
@@ -787,7 +800,8 @@ def analyze_phonemes_enhanced(
         multi_attempt_result=multi_attempt_result,
         error_pattern_analysis=pattern_analysis,
         clinical_notes=clinical_notes,
-        phoneme_class_errors=phoneme_class_errors
+        phoneme_class_errors=phoneme_class_errors,
+        wper_normative_level=wper_level
     )
 
 
@@ -814,6 +828,7 @@ def format_enhanced_phoneme_result_for_api(result: EnhancedPhonemeAnalysisResult
     return {
         "per_rule": round(result.per_rule, 3),
         "wper": round(result.wper, 3),
+        "wper_normative_level": result.wper_normative_level,
         "total_phonemes": result.total_phonemes,
         "error_count": len(result.errors),
         "error_summary": result.error_summary,

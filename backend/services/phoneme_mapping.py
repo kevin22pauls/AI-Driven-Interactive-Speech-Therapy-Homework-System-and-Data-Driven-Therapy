@@ -69,10 +69,15 @@ IPA_VARIANTS = {
     'ə': 'AH',
     'ɐ': 'AH',
     'ᵻ': 'IH',
+    'ƏL': 'AH',     # Syllabic L with schwa
+    'Ə': 'AH',      # Capital schwa
 
     # R-colored vowels
     'ɚ': 'ER',
     'ɜ': 'ER',
+    'ɜː': 'ER',     # Long version of ɜ
+    'ɜːɹ': 'ER',    # ɜ with length marker and r
+    'ɝː': 'ER',     # Long r-colored schwa
 
     # Vowel variations
     'i': 'IY',
@@ -82,6 +87,8 @@ IPA_VARIANTS = {
     'a': 'AA',
     'ɑː': 'AA',
     'ɔː': 'AO',
+    'ɔːɹ': 'AO',    # AO with r
+    'Ɔːɹ': 'AO',    # Capital variant
     'iː': 'IY',
     'uː': 'UW',
     'eː': 'EY',
