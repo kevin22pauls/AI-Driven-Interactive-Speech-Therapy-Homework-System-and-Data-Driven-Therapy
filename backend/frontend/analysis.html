@@ -70,6 +70,8 @@
     }
     .tab-panel {
       display: none;
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
     }
     .tab-panel.active {
       display: block;
@@ -393,20 +395,6 @@
     }
 
     function renderTranscriptTab(rec) {
-      // Build ML transcript section if available
-      let mlTranscriptSection = '';
-      if (rec.ml_transcript) {
-        mlTranscriptSection = `
-          <div class="transcript-box ml" style="background: #fef3c7; border-color: #f59e0b;">
-            <div class="label" style="color: #92400e;">ML Raw Transcript (What Was Actually Pronounced)</div>
-            <div class="text" style="color: #78350f; font-weight: 600;">${rec.ml_transcript}</div>
-            <div style="margin-top: 8px; font-size: 11px; color: #92400e;">
-              Reconstructed from acoustic phoneme detection - more accurate for mispronunciations
-            </div>
-          </div>
-        `;
-      }
-
       // Show phoneme sequence if available
       let phonemeSequence = '';
       if (rec.ml_detected_phonemes && rec.ml_detected_phonemes.length > 0) {
@@ -430,9 +418,7 @@
             <div class="transcript-box actual">
               <div class="label">Whisper Transcript (ASR Output)</div>
               <div class="text">${rec.transcript || '(no speech detected)'}</div>
-              ${!rec.ml_transcript ? '' : '<div style="margin-top: 6px; font-size: 11px; color: #64748b;">Note: ASR may auto-correct speech errors</div>'}
             </div>
-            ${mlTranscriptSection}
             ${phonemeSequence}
           </div>
         </div>
