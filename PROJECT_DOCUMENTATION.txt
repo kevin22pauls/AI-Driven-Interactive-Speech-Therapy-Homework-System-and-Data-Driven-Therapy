@@ -784,13 +784,22 @@ Example report:
     [x] Audio recording with auto-stop on silence
     [x] Full-screen immersive therapy experience
 
-12. DETAILED ANALYSIS PAGE
+12. DETAILED ANALYSIS PAGE (ENHANCED!)
     [x] Standalone recording analysis viewer
     [x] URL-based recording selection (?recording_id=X)
-    [x] Complete breakdown of all analysis metrics
+    [x] Complete breakdown of ALL 71 analysis metrics (100% coverage)
     [x] Phoneme error tables with clinical notes
+    [x] Phoneme class errors (stops, fricatives, nasals, etc.)
+    [x] Error pattern analysis (dominant type, position, consistency)
     [x] ML phoneme analysis with GOP scores
+    [x] ML phoneme alignment (expected vs detected)
     [x] Fluency analysis with SSI-4 severity
+    [x] SSI-4 component breakdown (frequency/duration scores)
+    [x] Dysfluency rates (per 100 words, per minute)
+    [x] Speech timing (phonation time/ratio, pathological pause %)
+    [x] Rate variability (CV, PVI, rate trend)
+    [x] Multiple fluency scores (standard, weighted, clinical)
+    [x] Semantic similarity breakdown (direct, category, overall)
     [x] Linked from dashboard for easy access
 
 13. APPLICATION LAUNCHER (NEW!)
@@ -1133,10 +1142,10 @@ This system uses the following open-source tools:
 - ONNX Runtime Web - Browser ML Inference
 
 
-Last Updated: February 3, 2026
-Version: 5.1.0
+Last Updated: February 6, 2026
+Version: 5.2.0
 Status: Research MVP with ML-Powered Analysis + AR Object Detection
-Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | YOLOv8 AR Detection | Analysis Page | Launcher | Navigation Home
+Features: Wav2Vec2 Phoneme | Silero VAD | Enhanced Semantics | YOLOv8 AR Detection | Full Analysis Display (71 metrics) | Launcher | Navigation Home
 
 ================================================================================
                           END OF DOCUMENTATION
