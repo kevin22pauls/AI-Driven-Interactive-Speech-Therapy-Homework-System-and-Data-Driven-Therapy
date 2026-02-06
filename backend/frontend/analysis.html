@@ -650,6 +650,10 @@
             <div class="card purple">
               <div class="card-header"><h3>Rate Variability ${r.rate_trend?`<span class="badge ${r.rate_trend==='stable'?'good':'warn'}">${r.rate_trend}</span>`:''}</h3></div>
               <div class="card-body">
+                ${(!r.local_cv && !r.global_cv && !r.normalized_pvi) ? `
+                <div style="padding:8px 12px;background:#f3e8ff;border-radius:6px;font-size:13px;color:#7c3aed;margin-bottom:10px">
+                  ⓘ Insufficient word-level timing data for variability analysis. Requires longer utterances.
+                </div>` : ''}
                 <div class="metrics-list">
                   <span class="m-label">Local CV</span><span class="m-value">${num(r.local_cv,3)}</span>
                   <span class="m-label">Global CV</span><span class="m-value">${num(r.global_cv,3)}</span>
