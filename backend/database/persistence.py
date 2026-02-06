@@ -892,10 +892,16 @@ def get_recording_by_id(recording_id: int) -> Optional[Dict[str, Any]]:
 
         # Parse all JSON fields
         json_fields = [
+            # Phoneme analysis
             'phoneme_errors_json', 'problematic_phonemes_json', 'clinical_notes_json',
-            'stuttering_events_json', 'pauses_json', 'fluency_notes_json',
+            'phoneme_class_errors_json', 'error_pattern_analysis_json', 'multi_attempt_analysis_json',
+            # ML phoneme analysis
             'ml_detected_phonemes_json', 'ml_detected_ipa_json',
-            'ml_alignment_json', 'ml_phoneme_scores_json', 'ml_transcript_details_json'
+            'ml_alignment_json', 'ml_phoneme_scores_json', 'ml_transcript_details_json',
+            # Semantic analysis
+            'circumlocution_features_json', 'semantic_paraphasia_json',
+            # Fluency analysis
+            'stuttering_events_json', 'pauses_json', 'fluency_notes_json', 'dysfluency_profile_json'
         ]
 
         for field in json_fields:
