@@ -157,9 +157,10 @@
       width: 100%;
       border-collapse: collapse;
     }
+    .table.compact { width: auto; }
     .table th {
       text-align: left;
-      padding: 8px 12px;
+      padding: 6px 16px 6px 0;
       background: #f8f9fa;
       font-size: 13px;
       font-weight: 600;
@@ -169,7 +170,7 @@
       border-bottom: 2px solid #e8e8e8;
     }
     .table td {
-      padding: 8px 12px;
+      padding: 6px 16px 6px 0;
       border-bottom: 1px solid #f0f0f0;
       font-size: 15px;
       color: #333;
@@ -177,8 +178,8 @@
     .table tr:last-child td { border-bottom: none; }
     .table tr:hover { background: #f8f9ff; }
     .table .mono { font-family: 'SF Mono', Monaco, Consolas, monospace; }
-    .table .label-cell { color: #666; }
-    .table .value-cell { font-weight: 600; }
+    .table .label-cell { color: #666; white-space: nowrap; }
+    .table .value-cell { font-weight: 600; text-align: right; padding-left: 24px; }
 
     /* Badges */
     .badge {
@@ -281,6 +282,32 @@
       text-transform: uppercase;
     }
 
+    /* Compact Metrics List */
+    .metrics-list {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4px 16px;
+      align-items: center;
+    }
+    .metrics-list .m-label {
+      font-size: 14px;
+      color: #666;
+    }
+    .metrics-list .m-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a2e;
+      text-align: right;
+    }
+
+    /* 4-column content grid for compact display */
+    .content-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
     /* Notes */
     .note {
       padding: 10px 14px;
@@ -298,9 +325,13 @@
     .error { background: #fee2e2; color: #991b1b; padding: 24px; border-radius: 12px; text-align: center; margin: 24px; font-size: 16px; }
 
     /* Responsive */
+    @media (max-width: 1200px) {
+      .content-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
     @media (max-width: 1000px) {
       .score-row { grid-template-columns: repeat(2, 1fr); }
       .content-grid { grid-template-columns: 1fr; }
+      .content-grid-4 { grid-template-columns: 1fr; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
@@ -416,15 +447,15 @@
             <div class="card">
               <div class="card-header"><h3>Semantic Analysis</h3></div>
               <div class="card-body">
-                <div style="margin-bottom:16px">
+                <div style="margin-bottom:12px">
                   <span class="badge large ${(r.semantic_classification||'').toLowerCase()==='correct'?'good':(r.semantic_classification||'').toLowerCase()==='partial'?'warn':'bad'}">${r.semantic_classification || 'N/A'}</span>
                 </div>
-                <table class="table">
-                  <tr><td class="label-cell">Overall Similarity</td><td class="value-cell">${pct(r.semantic_score)}</td></tr>
-                  <tr><td class="label-cell">Direct Embedding</td><td class="value-cell">${pct(r.direct_similarity)}</td></tr>
-                  <tr><td class="label-cell">Category Match</td><td class="value-cell">${pct(r.category_similarity)}</td></tr>
-                  <tr><td class="label-cell">Word Error Rate</td><td class="value-cell">${pct(r.wer)}</td></tr>
-                </table>
+                <div class="metrics-list">
+                  <span class="m-label">Overall Similarity</span><span class="m-value">${pct(r.semantic_score)}</span>
+                  <span class="m-label">Direct Embedding</span><span class="m-value">${pct(r.direct_similarity)}</span>
+                  <span class="m-label">Category Match</span><span class="m-value">${pct(r.category_similarity)}</span>
+                  <span class="m-label">Word Error Rate</span><span class="m-value">${pct(r.wer)}</span>
+                </div>
                 <div class="indicators">
                   <div class="indicator"><span class="dot ${r.circumlocution_detected?'active':''}"></span> Circumlocution</div>
                   <div class="indicator"><span class="dot ${r.conduite_d_approche_detected?'active':''}"></span> Self-Correction</div>
@@ -573,89 +604,86 @@
             `:`<div class="score-card"><div class="value">N/A</div><div class="label">SSI-4 Severity</div></div>`}
           </div>
 
-          <div class="content-grid">
+          <div class="content-grid-4">
             <div class="card">
               <div class="card-header"><h3>Dysfluency Metrics</h3></div>
               <div class="card-body">
-                <table class="table">
-                  <tr><td class="label-cell">Total Pauses</td><td class="value-cell">${r.pauses?.length||0}</td></tr>
-                  <tr><td class="label-cell">Anomic Pauses</td><td class="value-cell">${r.anomic_pause_count||0}</td></tr>
-                  <tr><td class="label-cell">Apraxic Pauses</td><td class="value-cell">${r.apraxic_pause_count||0}</td></tr>
-                  <tr><td class="label-cell">Hesitations</td><td class="value-cell">${r.hesitation_count||0}</td></tr>
-                  <tr><td class="label-cell">Blocks</td><td class="value-cell">${r.block_count||0}</td></tr>
-                  <tr><td class="label-cell">Dysfluencies/100 Words</td><td class="value-cell">${num(r.dysfluencies_per_100_words)}</td></tr>
-                </table>
+                <div class="metrics-list">
+                  <span class="m-label">Total Pauses</span><span class="m-value">${r.pauses?.length||0}</span>
+                  <span class="m-label">Anomic Pauses</span><span class="m-value">${r.anomic_pause_count||0}</span>
+                  <span class="m-label">Apraxic Pauses</span><span class="m-value">${r.apraxic_pause_count||0}</span>
+                  <span class="m-label">Hesitations</span><span class="m-value">${r.hesitation_count||0}</span>
+                  <span class="m-label">Blocks</span><span class="m-value">${r.block_count||0}</span>
+                  <span class="m-label">Dysfl./100 Words</span><span class="m-value">${num(r.dysfluencies_per_100_words)}</span>
+                </div>
               </div>
             </div>
 
             <div class="card">
               <div class="card-header"><h3>Speech Timing</h3></div>
               <div class="card-body">
-                <table class="table">
-                  <tr><td class="label-cell">Speaking Rate</td><td class="value-cell">${num(r.speaking_rate)} syl/min</td></tr>
-                  <tr><td class="label-cell">Pause-Adjusted Rate</td><td class="value-cell">${num(r.pause_adjusted_rate)} syl/min</td></tr>
-                  <tr><td class="label-cell">Phonation Time</td><td class="value-cell">${num(r.phonation_time,2)}s</td></tr>
-                  <tr><td class="label-cell">Phonation Ratio</td><td class="value-cell">${pct(r.phonation_ratio)}</td></tr>
-                  <tr><td class="label-cell">Mean Pause Duration</td><td class="value-cell">${num(r.mean_pause_duration,2)}s</td></tr>
-                  <tr><td class="label-cell">Pathological Pause %</td><td class="value-cell">${pct(r.pathological_pause_ratio)}</td></tr>
-                </table>
+                <div class="metrics-list">
+                  <span class="m-label">Speaking Rate</span><span class="m-value">${num(r.speaking_rate)} syl/m</span>
+                  <span class="m-label">Pause-Adj Rate</span><span class="m-value">${num(r.pause_adjusted_rate)} syl/m</span>
+                  <span class="m-label">Phonation Time</span><span class="m-value">${num(r.phonation_time,2)}s</span>
+                  <span class="m-label">Phonation Ratio</span><span class="m-value">${pct(r.phonation_ratio)}</span>
+                  <span class="m-label">Mean Pause Dur.</span><span class="m-value">${num(r.mean_pause_duration,2)}s</span>
+                  <span class="m-label">Pathological %</span><span class="m-value">${pct(r.pathological_pause_ratio)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3>Rate Variability ${r.rate_trend?`<span class="badge ${r.rate_trend==='stable'?'good':'warn'}">${r.rate_trend}</span>`:''}</h3></div>
+              <div class="card-body">
+                <div class="metrics-list">
+                  <span class="m-label">Local CV</span><span class="m-value">${num(r.local_cv,3)}</span>
+                  <span class="m-label">Global CV</span><span class="m-value">${num(r.global_cv,3)}</span>
+                  <span class="m-label">Normalized PVI</span><span class="m-value">${num(r.normalized_pvi,3)}</span>
+                  <span class="m-label">Rate Variability</span><span class="m-value">${num(r.speech_rate_variability,3)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3>Fluency Scores</h3></div>
+              <div class="card-body">
+                <div class="metrics-list">
+                  <span class="m-label">Standard</span><span class="m-value">${num(r.standard_fluency_pct,0)}%</span>
+                  <span class="m-label">Weighted</span><span class="m-value">${num(r.weighted_fluency_pct,0)}%</span>
+                  <span class="m-label">Clinical</span><span class="m-value">${num(r.clinical_fluency_pct,0)}%</span>
+                  <span class="m-label">LFR Ratio</span><span class="m-value">${pct(r.lfr_ratio)}</span>
+                </div>
               </div>
             </div>
           </div>
 
           <div class="content-grid">
-            <div class="card">
-              <div class="card-header"><h3>Rate Variability ${r.rate_trend?`<span class="badge ${r.rate_trend==='stable'?'good':'warn'}" style="margin-left:12px">${r.rate_trend}</span>`:''}</h3></div>
-              <div class="card-body">
-                <table class="table">
-                  <tr><td class="label-cell">Local CV</td><td class="value-cell">${num(r.local_cv,3)}</td></tr>
-                  <tr><td class="label-cell">Global CV</td><td class="value-cell">${num(r.global_cv,3)}</td></tr>
-                  <tr><td class="label-cell">Normalized PVI</td><td class="value-cell">${num(r.normalized_pvi,3)}</td></tr>
-                  <tr><td class="label-cell">Rate Variability</td><td class="value-cell">${num(r.speech_rate_variability,3)}</td></tr>
-                </table>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header"><h3>Fluency Scores Comparison</h3></div>
-              <div class="card-body">
-                <table class="table">
-                  <tr><td class="label-cell">Standard Fluency</td><td class="value-cell">${num(r.standard_fluency_pct,0)}%</td></tr>
-                  <tr><td class="label-cell">Weighted Fluency</td><td class="value-cell">${num(r.weighted_fluency_pct,0)}%</td></tr>
-                  <tr><td class="label-cell">Clinical Fluency</td><td class="value-cell">${num(r.clinical_fluency_pct,0)}%</td></tr>
-                  <tr><td class="label-cell">LFR Ratio</td><td class="value-cell">${pct(r.lfr_ratio)}</td></tr>
-                </table>
-              </div>
-            </div>
-          </div>
-
           ${r.ssi_severity?`
-          <div class="card">
-            <div class="card-header"><h3>SSI-4 Component Breakdown</h3></div>
-            <div class="card-body" style="padding:0">
-              <table class="table">
-                <thead><tr><th>Component</th><th>Value</th><th>Score</th></tr></thead>
-                <tbody>
-                  <tr><td>Frequency</td><td>${num(r.ssi_frequency_pct)}%</td><td>${r.ssi_frequency_score||'?'} / 10</td></tr>
-                  <tr><td>Duration</td><td>${num(r.ssi_avg_duration,2)}s avg</td><td>${r.ssi_duration_score||'?'} / 10</td></tr>
-                  <tr><td class="value-cell">Total</td><td></td><td class="value-cell">${r.ssi_total_score||'?'}</td></tr>
-                </tbody>
-              </table>
+            <div class="card">
+              <div class="card-header"><h3>SSI-4 Breakdown</h3></div>
+              <div class="card-body">
+                <div class="metrics-list">
+                  <span class="m-label">Frequency</span><span class="m-value">${num(r.ssi_frequency_pct)}% → ${r.ssi_frequency_score||'?'}/10</span>
+                  <span class="m-label">Duration</span><span class="m-value">${num(r.ssi_avg_duration,2)}s → ${r.ssi_duration_score||'?'}/10</span>
+                  <span class="m-label" style="font-weight:600">Total Score</span><span class="m-value" style="font-size:18px">${r.ssi_total_score||'?'}</span>
+                </div>
+              </div>
             </div>
-          </div>
           `:''}
 
           ${pauseRows?`
-          <div class="card">
-            <div class="card-header"><h3>Pause Log</h3></div>
-            <div class="card-body" style="padding:0">
-              <table class="table">
-                <thead><tr><th>#</th><th>Type</th><th>Duration</th></tr></thead>
-                <tbody>${pauseRows}</tbody>
-              </table>
+            <div class="card">
+              <div class="card-header"><h3>Pause Log</h3></div>
+              <div class="card-body" style="padding:0;max-height:180px;overflow-y:auto">
+                <table class="table">
+                  <thead><tr><th>#</th><th>Type</th><th>Duration</th></tr></thead>
+                  <tbody>${pauseRows}</tbody>
+                </table>
+              </div>
             </div>
-          </div>
           `:''}
+          </div>
 
           ${(r.clinical_notes?.length||r.fluency_notes?.length)?`
           <div class="card">
