@@ -14,844 +14,475 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      font-size: 13px;
     }
 
-    /* Header */
+    /* Header - Compact */
     .header {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 12px 20px;
+      padding: 8px 16px;
       color: white;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .header h1 { font-size: 16px; font-weight: 600; }
-    .header .meta { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+    .header h1 { font-size: 14px; font-weight: 600; }
+    .header .meta { font-size: 11px; opacity: 0.9; }
     .header .back-btn {
-      padding: 8px 16px;
+      padding: 6px 12px;
       background: rgba(255,255,255,0.2);
       color: white;
       text-decoration: none;
-      border-radius: 6px;
-      font-size: 13px;
+      border-radius: 4px;
+      font-size: 12px;
     }
-    .header .back-btn:hover { background: rgba(255,255,255,0.3); }
 
-    /* Tabs */
+    /* Tabs - Compact */
     .tabs {
       display: flex;
       background: #fff;
       border-bottom: 1px solid #e2e8f0;
-      padding: 0 20px;
+      padding: 0 12px;
     }
     .tab-btn {
-      padding: 14px 24px;
+      padding: 10px 16px;
       border: none;
       background: none;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       color: #64748b;
       cursor: pointer;
-      border-bottom: 3px solid transparent;
+      border-bottom: 2px solid transparent;
     }
     .tab-btn:hover { color: #667eea; }
     .tab-btn.active { color: #667eea; border-bottom-color: #667eea; }
 
     /* Tab Content */
-    .tab-content { flex: 1; overflow-y: auto; padding: 20px; }
-    .tab-panel { display: none; max-height: calc(100vh - 140px); overflow-y: auto; }
+    .tab-content { flex: 1; overflow-y: auto; padding: 12px; }
+    .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    /* Cards */
+    /* Cards - Compact */
     .card {
       background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-radius: 6px;
+      padding: 12px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
       border: 1px solid #e2e8f0;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
     }
     .card h3 {
-      font-size: 14px;
+      font-size: 11px;
       font-weight: 600;
-      color: #1e293b;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #e2e8f0;
+      color: #64748b;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    /* Summary Row */
+    /* Summary Row - Compact */
     .summary-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
     }
+    @media (max-width: 800px) { .summary-row { grid-template-columns: repeat(2, 1fr); } }
     .summary-card {
-      background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
+      background: #fff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 20px;
+      border-radius: 6px;
+      padding: 12px;
       text-align: center;
     }
-    .summary-card.highlight {
-      background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-      border-color: #667eea40;
-    }
-    .summary-card .big-value {
-      font-size: 36px;
-      font-weight: 700;
-      color: #1e293b;
-      line-height: 1;
-    }
+    .summary-card.highlight { background: #f8f7ff; border-color: #667eea40; }
+    .summary-card .big-value { font-size: 24px; font-weight: 700; color: #1e293b; }
     .summary-card .big-value.good { color: #059669; }
     .summary-card .big-value.warn { color: #d97706; }
     .summary-card .big-value.bad { color: #dc2626; }
-    .summary-card .label {
-      font-size: 12px;
-      color: #64748b;
-      margin-top: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .summary-card .sub-label {
-      font-size: 11px;
-      color: #94a3b8;
-      margin-top: 4px;
-    }
+    .summary-card .label { font-size: 10px; color: #64748b; margin-top: 4px; text-transform: uppercase; }
+    .summary-card .sub { font-size: 9px; color: #94a3b8; margin-top: 2px; }
 
-    /* Progress Bar */
-    .progress-bar {
-      height: 8px;
-      background: #e2e8f0;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-top: 12px;
-    }
-    .progress-bar .fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.3s;
-    }
-    .progress-bar .fill.good { background: linear-gradient(90deg, #10b981, #059669); }
-    .progress-bar .fill.warn { background: linear-gradient(90deg, #fbbf24, #d97706); }
-    .progress-bar .fill.bad { background: linear-gradient(90deg, #f87171, #dc2626); }
+    /* Progress Bar - Thin */
+    .prog { height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+    .prog .fill { height: 100%; border-radius: 2px; }
+    .prog .fill.good { background: #10b981; }
+    .prog .fill.warn { background: #f59e0b; }
+    .prog .fill.bad { background: #ef4444; }
 
-    /* Tables */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    .data-table th {
+    /* Tables - Compact */
+    .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .tbl th {
       background: #f8fafc;
-      padding: 12px 16px;
+      padding: 6px 8px;
       text-align: left;
       font-weight: 600;
-      color: #475569;
-      border-bottom: 2px solid #e2e8f0;
-      font-size: 11px;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
-    .data-table td {
-      padding: 12px 16px;
-      border-bottom: 1px solid #f1f5f9;
-      color: #334155;
-    }
-    .data-table tr:hover { background: #f8fafc; }
-    .data-table .mono { font-family: 'SF Mono', Monaco, monospace; font-size: 12px; }
-    .data-table .badge {
+    .tbl td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl .mono { font-family: monospace; font-size: 11px; }
+
+    /* Badges */
+    .badge {
       display: inline-block;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
       font-weight: 500;
     }
-    .badge.sub { background: #fef3c7; color: #92400e; }
-    .badge.del { background: #fee2e2; color: #991b1b; }
-    .badge.ins { background: #dbeafe; color: #1e40af; }
     .badge.good { background: #d1fae5; color: #065f46; }
     .badge.warn { background: #fef3c7; color: #92400e; }
     .badge.bad { background: #fee2e2; color: #991b1b; }
     .badge.info { background: #e0e7ff; color: #3730a3; }
+    .badge.sub { background: #fef3c7; color: #92400e; }
+    .badge.del { background: #fee2e2; color: #991b1b; }
+    .badge.ins { background: #dbeafe; color: #1e40af; }
 
-    /* Metric Grid */
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 12px;
-    }
-    .metric-item {
-      background: #f8fafc;
-      padding: 16px;
-      border-radius: 8px;
-      text-align: center;
-      border: 1px solid #e2e8f0;
-    }
-    .metric-item .value {
-      font-size: 24px;
-      font-weight: 700;
-      color: #1e293b;
-    }
-    .metric-item .label {
+    /* Grid layouts */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    @media (max-width: 700px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+    /* Transcript - Compact */
+    .transcript { background: #f8fafc; padding: 10px; border-radius: 4px; margin-bottom: 8px; border-left: 3px solid #667eea; }
+    .transcript.exp { border-left-color: #94a3b8; }
+    .transcript.act { border-left-color: #10b981; }
+    .transcript .lbl { font-size: 9px; text-transform: uppercase; color: #64748b; margin-bottom: 4px; font-weight: 600; }
+    .transcript .txt { font-size: 13px; line-height: 1.4; }
+
+    /* Chips - Compact */
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .chip {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: monospace;
       font-size: 11px;
-      color: #64748b;
-      margin-top: 4px;
-      text-transform: uppercase;
     }
-
-    /* Transcript */
-    .transcript-box {
-      background: #f8fafc;
-      padding: 16px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      border-left: 4px solid #667eea;
-    }
-    .transcript-box.expected { border-left-color: #64748b; }
-    .transcript-box.actual { border-left-color: #059669; }
-    .transcript-box .label {
-      font-size: 11px;
-      text-transform: uppercase;
-      color: #64748b;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-    .transcript-box .text { font-size: 16px; line-height: 1.6; }
-
-    /* Severity Badge */
-    .severity-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 14px;
-    }
-    .severity-badge.normal { background: #d1fae5; color: #065f46; }
-    .severity-badge.mild { background: #fef3c7; color: #92400e; }
-    .severity-badge.moderate { background: #fed7aa; color: #9a3412; }
-    .severity-badge.severe { background: #fee2e2; color: #991b1b; }
-
-    /* Two Column Layout */
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
 
     /* Bool indicators */
-    .bool-list { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
-    .bool-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: #f8fafc;
-      border-radius: 6px;
-      font-size: 13px;
-    }
-    .bool-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-    }
-    .bool-icon.yes { background: #d1fae5; color: #065f46; }
-    .bool-icon.no { background: #f1f5f9; color: #94a3b8; }
+    .bool { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; font-size: 11px; }
+    .bool .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .bool .dot.yes { background: #10b981; }
+    .bool .dot.no { background: #d1d5db; }
 
-    /* Phoneme chips */
-    .phoneme-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-    .ph-chip {
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-family: 'SF Mono', Monaco, monospace;
-      font-size: 12px;
-      font-weight: 500;
-    }
+    /* Severity */
+    .sev { display: inline-block; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 11px; }
+    .sev.normal { background: #d1fae5; color: #065f46; }
+    .sev.mild { background: #fef3c7; color: #92400e; }
+    .sev.moderate { background: #fed7aa; color: #9a3412; }
+    .sev.severe { background: #fee2e2; color: #991b1b; }
 
     /* Notes */
-    .notes-list { list-style: none; }
-    .notes-list li {
-      padding: 12px 16px;
-      background: #fffbeb;
-      border-left: 3px solid #f59e0b;
-      margin-bottom: 8px;
-      border-radius: 0 6px 6px 0;
-      font-size: 13px;
-      color: #92400e;
-    }
+    .note { padding: 8px 10px; background: #fffbeb; border-left: 2px solid #f59e0b; margin-bottom: 6px; font-size: 11px; color: #92400e; border-radius: 0 4px 4px 0; }
 
     /* Loading */
-    .loading { text-align: center; padding: 60px; color: #64748b; }
-    .error-msg { background: #fee2e2; color: #991b1b; padding: 20px; border-radius: 8px; text-align: center; margin: 20px; }
+    .loading { text-align: center; padding: 40px; color: #64748b; }
+    .error { background: #fee2e2; color: #991b1b; padding: 16px; border-radius: 6px; text-align: center; margin: 16px; }
   </style>
 </head>
 <body>
-  <div id="app">
-    <div class="loading">Loading analysis...</div>
-  </div>
+  <div id="app"><div class="loading">Loading...</div></div>
 
   <script>
-    const BACKEND = "http://127.0.0.1:8001";
+    const API = "http://127.0.0.1:8001";
 
-    async function loadRecording() {
-      const params = new URLSearchParams(window.location.search);
-      const recordingId = params.get('recording_id');
-      if (!recordingId) {
-        document.getElementById('app').innerHTML = '<div class="error-msg">No recording ID specified</div>';
-        return;
-      }
+    async function load() {
+      const id = new URLSearchParams(location.search).get('recording_id');
+      if (!id) return document.getElementById('app').innerHTML = '<div class="error">No recording ID</div>';
       try {
-        const response = await fetch(`${BACKEND}/recording/${recordingId}`);
-        if (!response.ok) throw new Error('Recording not found');
-        const rec = await response.json();
-        renderPage(rec);
-      } catch (error) {
-        document.getElementById('app').innerHTML = `<div class="error-msg">Error: ${error.message}</div>`;
+        const r = await fetch(`${API}/recording/${id}`);
+        if (!r.ok) throw new Error('Not found');
+        render(await r.json());
+      } catch (e) {
+        document.getElementById('app').innerHTML = `<div class="error">${e.message}</div>`;
       }
     }
 
-    function getScoreClass(score, thresholds = [0.8, 0.5]) {
-      if (score >= thresholds[0]) return 'good';
-      if (score >= thresholds[1]) return 'warn';
-      return 'bad';
-    }
+    const scoreClass = (v, t=[0.8,0.5]) => v >= t[0] ? 'good' : v >= t[1] ? 'warn' : 'bad';
+    const errClass = (v, t=[0.1,0.3]) => v <= t[0] ? 'good' : v <= t[1] ? 'warn' : 'bad';
+    const pct = v => v != null ? (v * 100).toFixed(0) + '%' : 'N/A';
+    const num = (v, d=1) => v != null ? v.toFixed(d) : 'N/A';
 
-    function getErrorClass(rate, thresholds = [0.1, 0.3]) {
-      if (rate <= thresholds[0]) return 'good';
-      if (rate <= thresholds[1]) return 'warn';
-      return 'bad';
-    }
-
-    function renderPage(rec) {
-      const patientId = rec.patient_id || rec.session_id?.split('_')[0] || 'N/A';
-      const createdAt = new Date(rec.created_at).toLocaleString();
-
+    function render(r) {
+      const pid = r.patient_id || r.session_id?.split('_')[0] || 'N/A';
       document.getElementById('app').innerHTML = `
         <div class="header">
-          <div>
-            <h1>Analysis #${rec.id}: ${rec.object_name || 'Unknown'}</h1>
-            <div class="meta">Patient: ${patientId} | ${createdAt}</div>
-          </div>
-          <a href="/dashboard" class="back-btn">← Dashboard</a>
+          <div><h1>#${r.id}: ${r.object_name || 'Unknown'}</h1><span class="meta">Patient: ${pid} | ${new Date(r.created_at).toLocaleString()}</span></div>
+          <a href="/dashboard" class="back-btn">← Back</a>
         </div>
         <div class="tabs">
           <button class="tab-btn active" data-tab="overview">Overview</button>
           <button class="tab-btn" data-tab="phoneme">Phoneme</button>
           <button class="tab-btn" data-tab="fluency">Fluency</button>
-          <button class="tab-btn" data-tab="ml">ML Analysis</button>
-          <button class="tab-btn" data-tab="raw">Raw JSON</button>
+          <button class="tab-btn" data-tab="ml">ML</button>
+          <button class="tab-btn" data-tab="raw">JSON</button>
         </div>
         <div class="tab-content">
-          ${renderOverviewTab(rec)}
-          ${renderPhonemeTab(rec)}
-          ${renderFluencyTab(rec)}
-          ${renderMLTab(rec)}
-          ${renderRawTab(rec)}
+          ${overviewTab(r)}
+          ${phonemeTab(r)}
+          ${fluencyTab(r)}
+          ${mlTab(r)}
+          ${rawTab(r)}
         </div>
       `;
-      initTabs();
+      document.querySelectorAll('.tab-btn').forEach(b => b.onclick = () => {
+        document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        document.getElementById('tab-' + b.dataset.tab).classList.add('active');
+      });
     }
 
-    function renderOverviewTab(rec) {
-      const semScore = rec.semantic_score || 0;
-      const per = rec.per || 0;
-      const fluency = rec.fluency_percentage || rec.standard_fluency_pct || 0;
-
+    function overviewTab(r) {
+      const sem = r.semantic_score || 0;
+      const per = r.per || 0;
+      const flu = r.fluency_percentage || r.standard_fluency_pct || 0;
       return `
         <div class="tab-panel active" id="tab-overview">
-          <!-- Key Metrics Summary -->
           <div class="summary-row">
             <div class="summary-card highlight">
-              <div class="big-value ${getScoreClass(semScore)}">${(semScore * 100).toFixed(0)}%</div>
-              <div class="label">Semantic Score</div>
-              <div class="progress-bar"><div class="fill ${getScoreClass(semScore)}" style="width: ${semScore * 100}%"></div></div>
+              <div class="big-value ${scoreClass(sem)}">${pct(sem)}</div>
+              <div class="label">Semantic</div>
+              <div class="prog"><div class="fill ${scoreClass(sem)}" style="width:${sem*100}%"></div></div>
             </div>
             <div class="summary-card">
-              <div class="big-value ${getErrorClass(per)}">${(per * 100).toFixed(0)}%</div>
-              <div class="label">Phoneme Error Rate</div>
-              <div class="progress-bar"><div class="fill ${getErrorClass(per)}" style="width: ${Math.min(per * 100, 100)}%"></div></div>
+              <div class="big-value ${errClass(per)}">${pct(per)}</div>
+              <div class="label">PER</div>
+              <div class="prog"><div class="fill ${errClass(per)}" style="width:${Math.min(per*100,100)}%"></div></div>
             </div>
             <div class="summary-card">
-              <div class="big-value ${getScoreClass(fluency/100)}">${fluency.toFixed(0)}%</div>
+              <div class="big-value ${scoreClass(flu/100)}">${flu.toFixed(0)}%</div>
               <div class="label">Fluency</div>
-              <div class="progress-bar"><div class="fill ${getScoreClass(fluency/100)}" style="width: ${fluency}%"></div></div>
+              <div class="prog"><div class="fill ${scoreClass(flu/100)}" style="width:${flu}%"></div></div>
             </div>
             <div class="summary-card">
-              <div class="big-value">${rec.speech_rate?.toFixed(0) || 'N/A'}</div>
-              <div class="label">Words/Min</div>
-              <div class="sub-label">Speech Rate</div>
+              <div class="big-value">${num(r.speech_rate,0)}</div>
+              <div class="label">WPM</div>
             </div>
           </div>
 
-          <div class="two-col">
-            <!-- Transcript Card -->
+          <div class="grid-2">
             <div class="card">
-              <h3>Speech Transcript</h3>
-              <div class="transcript-box expected">
-                <div class="label">Expected Response</div>
-                <div class="text">${rec.prompt_text || rec.expected_answer || 'N/A'}</div>
-              </div>
-              <div class="transcript-box actual">
-                <div class="label">Patient Said</div>
-                <div class="text">${rec.transcript || '(no speech detected)'}</div>
-              </div>
+              <h3>Transcript</h3>
+              <div class="transcript exp"><div class="lbl">Expected</div><div class="txt">${r.prompt_text || r.expected_answer || 'N/A'}</div></div>
+              <div class="transcript act"><div class="lbl">Actual</div><div class="txt">${r.transcript || '(none)'}</div></div>
             </div>
-
-            <!-- Semantic Analysis Card -->
             <div class="card">
               <h3>Semantic Analysis</h3>
-              <div style="margin-bottom: 16px;">
-                <span class="severity-badge ${(rec.semantic_classification || '').toLowerCase() === 'correct' ? 'normal' : (rec.semantic_classification || '').toLowerCase() === 'partial' ? 'mild' : 'severe'}">
-                  ${rec.semantic_classification || 'N/A'}
-                </span>
-              </div>
-              <table class="data-table">
-                <tr><td>Overall Similarity</td><td><strong>${rec.semantic_score != null ? (rec.semantic_score * 100).toFixed(0) + '%' : 'N/A'}</strong></td></tr>
-                <tr><td>Direct Similarity</td><td>${rec.direct_similarity != null ? (rec.direct_similarity * 100).toFixed(0) + '%' : 'N/A'}</td></tr>
-                <tr><td>Category Match</td><td>${rec.category_similarity != null ? (rec.category_similarity * 100).toFixed(0) + '%' : 'N/A'}</td></tr>
-                <tr><td>Word Error Rate</td><td>${rec.wer != null ? (rec.wer * 100).toFixed(0) + '%' : 'N/A'}</td></tr>
+              <div style="margin-bottom:8px"><span class="sev ${(r.semantic_classification||'').toLowerCase()==='correct'?'normal':(r.semantic_classification||'').toLowerCase()==='partial'?'mild':'severe'}">${r.semantic_classification || 'N/A'}</span></div>
+              <table class="tbl">
+                <tr><td>Overall</td><td><strong>${pct(r.semantic_score)}</strong></td></tr>
+                <tr><td>Direct</td><td>${pct(r.direct_similarity)}</td></tr>
+                <tr><td>Category</td><td>${pct(r.category_similarity)}</td></tr>
+                <tr><td>WER</td><td>${pct(r.wer)}</td></tr>
               </table>
-              <div class="bool-list">
-                <div class="bool-item">
-                  <span class="bool-icon ${rec.circumlocution_detected ? 'yes' : 'no'}">${rec.circumlocution_detected ? '✓' : '–'}</span>
-                  Circumlocution
-                </div>
-                <div class="bool-item">
-                  <span class="bool-icon ${rec.conduite_d_approche_detected ? 'yes' : 'no'}">${rec.conduite_d_approche_detected ? '✓' : '–'}</span>
-                  Self-Correction
-                </div>
-                <div class="bool-item">
-                  <span class="bool-icon ${rec.semantic_paraphasia?.detected ? 'yes' : 'no'}">${rec.semantic_paraphasia?.detected ? '✓' : '–'}</span>
-                  Semantic Paraphasia
-                </div>
+              <div style="margin-top:8px">
+                <span class="bool"><span class="dot ${r.circumlocution_detected?'yes':'no'}"></span>Circumlocution</span>
+                <span class="bool"><span class="dot ${r.conduite_d_approche_detected?'yes':'no'}"></span>Self-correct</span>
+                <span class="bool"><span class="dot ${r.semantic_paraphasia?.detected?'yes':'no'}"></span>Paraphasia</span>
               </div>
             </div>
           </div>
 
-          <!-- Quick Stats -->
           <div class="card">
-            <h3>Quick Statistics</h3>
-            <div class="metric-grid">
-              <div class="metric-item">
-                <div class="value">${rec.total_phonemes || 0}</div>
-                <div class="label">Total Phonemes</div>
-              </div>
-              <div class="metric-item">
-                <div class="value">${rec.phoneme_errors?.length || 0}</div>
-                <div class="label">Phoneme Errors</div>
-              </div>
-              <div class="metric-item">
-                <div class="value">${rec.longest_fluent_run || 0}</div>
-                <div class="label">Longest Fluent Run</div>
-              </div>
-              <div class="metric-item">
-                <div class="value">${rec.pauses?.length || 0}</div>
-                <div class="label">Total Pauses</div>
-              </div>
-              <div class="metric-item">
-                <div class="value">${rec.articulation_rate?.toFixed(1) || 'N/A'}</div>
-                <div class="label">Articulation Rate</div>
-              </div>
-              <div class="metric-item">
-                <div class="value">${rec.ssi_severity || 'N/A'}</div>
-                <div class="label">SSI-4 Severity</div>
-              </div>
+            <h3>Quick Stats</h3>
+            <div class="grid-3">
+              <table class="tbl">
+                <tr><td>Total Phonemes</td><td><strong>${r.total_phonemes||0}</strong></td></tr>
+                <tr><td>Phoneme Errors</td><td>${r.phoneme_errors?.length||0}</td></tr>
+              </table>
+              <table class="tbl">
+                <tr><td>Longest Fluent Run</td><td><strong>${r.longest_fluent_run||0}</strong></td></tr>
+                <tr><td>Total Pauses</td><td>${r.pauses?.length||0}</td></tr>
+              </table>
+              <table class="tbl">
+                <tr><td>Articulation Rate</td><td><strong>${num(r.articulation_rate)}</strong></td></tr>
+                <tr><td>SSI-4 Severity</td><td>${r.ssi_severity||'N/A'}</td></tr>
+              </table>
             </div>
           </div>
         </div>
       `;
     }
 
-    function renderPhonemeTab(rec) {
-      // Build error table rows
-      let errorRows = '';
-      if (rec.phoneme_errors && rec.phoneme_errors.length > 0) {
-        rec.phoneme_errors.forEach((err, idx) => {
-          const typeClass = (err.type || '').includes('deletion') ? 'del' : (err.type || '').includes('insertion') ? 'ins' : 'sub';
-          const shortType = (err.type || 'unknown').replace('phonetically_similar_', 'similar ').replace('phonetically_dissimilar_', 'dissimilar ');
-          errorRows += `
-            <tr>
-              <td>${idx + 1}</td>
-              <td><strong>${err.word || '-'}</strong></td>
-              <td class="mono">/${err.expected || '-'}/</td>
-              <td class="mono">/${err.actual || '-'}/</td>
-              <td><span class="badge ${typeClass}">${shortType}</span></td>
-              <td style="font-size: 12px; color: #64748b;">${err.clinical_significance || '-'}</td>
-            </tr>
-          `;
+    function phonemeTab(r) {
+      let rows = '';
+      if (r.phoneme_errors?.length) {
+        r.phoneme_errors.forEach((e,i) => {
+          const tc = e.type?.includes('deletion')?'del':e.type?.includes('insertion')?'ins':'sub';
+          const t = (e.type||'').replace('phonetically_similar_','~').replace('phonetically_dissimilar_','≠');
+          rows += `<tr><td>${i+1}</td><td><strong>${e.word||'-'}</strong></td><td class="mono">/${e.expected||'-'}/</td><td class="mono">/${e.actual||'-'}/</td><td><span class="badge ${tc}">${t}</span></td><td style="font-size:10px;color:#64748b">${e.clinical_significance||''}</td></tr>`;
         });
       } else {
-        errorRows = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 24px;">No phoneme errors detected</td></tr>';
+        rows = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:16px">No errors</td></tr>';
       }
 
-      // Problematic phonemes
-      let probPhonemes = '';
-      if (rec.problematic_phonemes && Object.keys(rec.problematic_phonemes).length > 0) {
-        Object.entries(rec.problematic_phonemes).forEach(([p, c]) => {
-          probPhonemes += `<span class="ph-chip" style="background: #fee2e2; color: #991b1b;">/${p}/ × ${c}</span>`;
-        });
-      }
-
-      // Class errors
-      let classErrors = '';
-      if (rec.phoneme_class_errors && Object.keys(rec.phoneme_class_errors).length > 0) {
-        Object.entries(rec.phoneme_class_errors).forEach(([cls, count]) => {
-          const colors = { 'stops': '#ef4444', 'fricatives': '#f59e0b', 'affricates': '#84cc16', 'nasals': '#06b6d4', 'liquids': '#8b5cf6', 'glides': '#ec4899', 'vowels': '#3b82f6' };
-          const bg = colors[cls.toLowerCase()] || '#64748b';
-          classErrors += `<span class="ph-chip" style="background: ${bg}20; color: ${bg};">${cls}: ${count}</span>`;
-        });
-      }
+      let prob = '', cls = '';
+      if (r.problematic_phonemes) Object.entries(r.problematic_phonemes).forEach(([p,c]) => prob += `<span class="chip" style="background:#fee2e2;color:#991b1b">/${p}/ ×${c}</span>`);
+      if (r.phoneme_class_errors) Object.entries(r.phoneme_class_errors).forEach(([k,v]) => cls += `<span class="chip" style="background:#e0e7ff;color:#3730a3">${k}:${v}</span>`);
 
       return `
         <div class="tab-panel" id="tab-phoneme">
-          <!-- Summary Cards -->
           <div class="summary-row">
-            <div class="summary-card">
-              <div class="big-value ${getErrorClass(rec.per || 0)}">${rec.per != null ? (rec.per * 100).toFixed(0) + '%' : 'N/A'}</div>
-              <div class="label">PER (Standard)</div>
-              <div class="sub-label">Phoneme Error Rate</div>
-            </div>
-            <div class="summary-card">
-              <div class="big-value ${getErrorClass(rec.wper || 0)}">${rec.wper != null ? (rec.wper * 100).toFixed(0) + '%' : 'N/A'}</div>
-              <div class="label">WPER (Weighted)</div>
-              <div class="sub-label">Considers phonetic distance</div>
-            </div>
-            <div class="summary-card">
-              <div class="big-value">${rec.total_phonemes || 0}</div>
-              <div class="label">Total Phonemes</div>
-            </div>
-            <div class="summary-card">
-              <div class="big-value ${rec.phoneme_errors?.length > 3 ? 'bad' : rec.phoneme_errors?.length > 0 ? 'warn' : 'good'}">${rec.phoneme_errors?.length || 0}</div>
-              <div class="label">Errors Found</div>
-            </div>
+            <div class="summary-card"><div class="big-value ${errClass(r.per||0)}">${pct(r.per)}</div><div class="label">PER</div></div>
+            <div class="summary-card"><div class="big-value ${errClass(r.wper||0)}">${pct(r.wper)}</div><div class="label">WPER</div></div>
+            <div class="summary-card"><div class="big-value">${r.total_phonemes||0}</div><div class="label">Phonemes</div></div>
+            <div class="summary-card"><div class="big-value ${r.phoneme_errors?.length>3?'bad':r.phoneme_errors?.length>0?'warn':'good'}">${r.phoneme_errors?.length||0}</div><div class="label">Errors</div></div>
           </div>
 
-          ${probPhonemes ? `
-          <div class="card">
-            <h3>Problematic Phonemes</h3>
-            <div class="phoneme-chips">${probPhonemes}</div>
-          </div>
-          ` : ''}
+          ${prob||cls?`<div class="card"><h3>Problem Areas</h3>${prob?`<div style="margin-bottom:6px"><strong style="font-size:10px">Phonemes:</strong> <span class="chips">${prob}</span></div>`:''}${cls?`<div><strong style="font-size:10px">Classes:</strong> <span class="chips">${cls}</span></div>`:''}</div>`:''}
 
-          ${classErrors ? `
           <div class="card">
-            <h3>Errors by Phoneme Class</h3>
-            <div class="phoneme-chips">${classErrors}</div>
-            <p style="font-size: 11px; color: #94a3b8; margin-top: 12px;">Stops (p,b,t,d,k,g) | Fricatives (f,v,s,z) | Nasals (m,n,ng) | Liquids (l,r) | Glides (w,y)</p>
+            <h3>Error Details</h3>
+            <table class="tbl"><thead><tr><th>#</th><th>Word</th><th>Exp</th><th>Act</th><th>Type</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>
           </div>
-          ` : ''}
 
-          <!-- Error Table -->
+          ${r.error_pattern_analysis&&Object.keys(r.error_pattern_analysis).length?`
           <div class="card">
-            <h3>Phoneme Error Details</h3>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Word</th>
-                  <th>Expected</th>
-                  <th>Actual</th>
-                  <th>Type</th>
-                  <th>Clinical Note</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${errorRows}
-              </tbody>
+            <h3>Error Patterns</h3>
+            <table class="tbl">
+              ${r.error_pattern_analysis.dominant_error_type?`<tr><td>Dominant Type</td><td><strong>${r.error_pattern_analysis.dominant_error_type}</strong></td></tr>`:''}
+              ${r.error_pattern_analysis.most_affected_position?`<tr><td>Position</td><td>${r.error_pattern_analysis.most_affected_position}</td></tr>`:''}
+              ${r.error_pattern_analysis.substitution_pattern?`<tr><td>Pattern</td><td>${r.error_pattern_analysis.substitution_pattern}</td></tr>`:''}
+              ${r.error_pattern_analysis.consistency?`<tr><td>Consistency</td><td>${r.error_pattern_analysis.consistency}</td></tr>`:''}
             </table>
           </div>
-
-          ${rec.error_pattern_analysis && Object.keys(rec.error_pattern_analysis).length > 0 ? `
-          <div class="card">
-            <h3>Error Pattern Analysis</h3>
-            <table class="data-table">
-              ${rec.error_pattern_analysis.dominant_error_type ? `<tr><td>Dominant Error Type</td><td><strong>${rec.error_pattern_analysis.dominant_error_type}</strong></td></tr>` : ''}
-              ${rec.error_pattern_analysis.most_affected_position ? `<tr><td>Most Affected Position</td><td>${rec.error_pattern_analysis.most_affected_position}</td></tr>` : ''}
-              ${rec.error_pattern_analysis.substitution_pattern ? `<tr><td>Substitution Pattern</td><td>${rec.error_pattern_analysis.substitution_pattern}</td></tr>` : ''}
-              ${rec.error_pattern_analysis.consistency ? `<tr><td>Error Consistency</td><td>${rec.error_pattern_analysis.consistency}</td></tr>` : ''}
-            </table>
-          </div>
-          ` : ''}
+          `:''}
         </div>
       `;
     }
 
-    function renderFluencyTab(rec) {
-      // Pause table
-      let pauseRows = '';
-      if (rec.pauses && rec.pauses.length > 0) {
-        rec.pauses.slice(0, 15).forEach((p, idx) => {
-          const typeClass = p.type === 'anomic' ? 'warn' : p.type === 'block' ? 'bad' : 'info';
-          pauseRows += `
-            <tr>
-              <td>${idx + 1}</td>
-              <td><span class="badge ${typeClass}">${p.type || 'pause'}</span></td>
-              <td>${p.duration?.toFixed(2) || '?'}s</td>
-              <td>${p.position || '-'}</td>
-            </tr>
-          `;
+    function fluencyTab(r) {
+      const flu = r.fluency_percentage || r.standard_fluency_pct || 0;
+      let pauses = '';
+      if (r.pauses?.length) {
+        r.pauses.slice(0,10).forEach((p,i) => {
+          const tc = p.type==='anomic'?'warn':p.type==='block'?'bad':'info';
+          pauses += `<tr><td>${i+1}</td><td><span class="badge ${tc}">${p.type||'pause'}</span></td><td>${num(p.duration,2)}s</td></tr>`;
         });
-        if (rec.pauses.length > 15) {
-          pauseRows += `<tr><td colspan="4" style="text-align: center; color: #64748b;">... and ${rec.pauses.length - 15} more pauses</td></tr>`;
-        }
+        if (r.pauses.length > 10) pauses += `<tr><td colspan="3" style="text-align:center;color:#94a3b8">+${r.pauses.length-10} more</td></tr>`;
       }
 
       return `
         <div class="tab-panel" id="tab-fluency">
-          <!-- Summary Cards -->
           <div class="summary-row">
-            <div class="summary-card highlight">
-              <div class="big-value ${getScoreClass((rec.fluency_percentage || rec.standard_fluency_pct || 0)/100)}">${(rec.fluency_percentage ?? rec.standard_fluency_pct)?.toFixed(0) ?? 'N/A'}%</div>
-              <div class="label">Fluency Score</div>
-              <div class="progress-bar"><div class="fill ${getScoreClass((rec.fluency_percentage || rec.standard_fluency_pct || 0)/100)}" style="width: ${rec.fluency_percentage || rec.standard_fluency_pct || 0}%"></div></div>
-            </div>
-            <div class="summary-card">
-              <div class="big-value">${rec.longest_fluent_run || 0}</div>
-              <div class="label">Longest Fluent Run</div>
-              <div class="sub-label">words without dysfluency</div>
-            </div>
-            <div class="summary-card">
-              <div class="big-value">${rec.articulation_rate?.toFixed(1) || 'N/A'}</div>
-              <div class="label">Articulation Rate</div>
-              <div class="sub-label">syllables/min</div>
-            </div>
-            ${rec.ssi_severity ? `
-            <div class="summary-card">
-              <span class="severity-badge ${rec.ssi_severity}">${rec.ssi_severity.toUpperCase()}</span>
-              <div class="label" style="margin-top: 8px;">SSI-4 Severity</div>
-              <div class="sub-label">Score: ${rec.ssi_total_score || '?'}</div>
-            </div>
-            ` : ''}
+            <div class="summary-card highlight"><div class="big-value ${scoreClass(flu/100)}">${flu.toFixed(0)}%</div><div class="label">Fluency</div><div class="prog"><div class="fill ${scoreClass(flu/100)}" style="width:${flu}%"></div></div></div>
+            <div class="summary-card"><div class="big-value">${r.longest_fluent_run||0}</div><div class="label">LFR</div><div class="sub">words</div></div>
+            <div class="summary-card"><div class="big-value">${num(r.articulation_rate)}</div><div class="label">Art. Rate</div><div class="sub">syl/min</div></div>
+            ${r.ssi_severity?`<div class="summary-card"><span class="sev ${r.ssi_severity}">${r.ssi_severity.toUpperCase()}</span><div class="label" style="margin-top:4px">SSI-4</div><div class="sub">Score: ${r.ssi_total_score||'?'}</div></div>`:''}
           </div>
 
-          <div class="two-col">
-            <!-- Dysfluency Metrics -->
+          <div class="grid-2">
             <div class="card">
-              <h3>Dysfluency Metrics</h3>
-              <table class="data-table">
-                <tr><td>Total Pauses</td><td><strong>${rec.pauses?.length || 0}</strong></td></tr>
-                <tr><td>Anomic Pauses</td><td>${rec.anomic_pause_count || 0}</td></tr>
-                <tr><td>Apraxic Pauses</td><td>${rec.apraxic_pause_count || 0}</td></tr>
-                <tr><td>Hesitations</td><td>${rec.hesitation_count || 0}</td></tr>
-                <tr><td>Blocks</td><td>${rec.block_count || 0}</td></tr>
-                <tr><td>Dysfluencies/100 Words</td><td>${rec.dysfluencies_per_100_words?.toFixed(1) || 'N/A'}</td></tr>
-                <tr><td>Dysfluencies/Min</td><td>${rec.dysfluencies_per_minute?.toFixed(1) || 'N/A'}</td></tr>
+              <h3>Dysfluency Counts</h3>
+              <table class="tbl">
+                <tr><td>Pauses</td><td><strong>${r.pauses?.length||0}</strong></td><td>Anomic</td><td>${r.anomic_pause_count||0}</td></tr>
+                <tr><td>Hesitations</td><td>${r.hesitation_count||0}</td><td>Apraxic</td><td>${r.apraxic_pause_count||0}</td></tr>
+                <tr><td>Blocks</td><td>${r.block_count||0}</td><td>Per 100w</td><td>${num(r.dysfluencies_per_100_words)}</td></tr>
               </table>
             </div>
-
-            <!-- Timing Metrics -->
             <div class="card">
-              <h3>Speech Timing</h3>
-              <table class="data-table">
-                <tr><td>Speaking Rate</td><td>${rec.speaking_rate?.toFixed(1) || 'N/A'} syl/min</td></tr>
-                <tr><td>Pause-Adjusted Rate</td><td>${rec.pause_adjusted_rate?.toFixed(1) || 'N/A'} syl/min</td></tr>
-                <tr><td>Phonation Time</td><td>${rec.phonation_time?.toFixed(2) || 'N/A'}s</td></tr>
-                <tr><td>Phonation Ratio</td><td>${rec.phonation_ratio != null ? (rec.phonation_ratio * 100).toFixed(0) + '%' : 'N/A'}</td></tr>
-                <tr><td>Mean Pause Duration</td><td>${rec.mean_pause_duration?.toFixed(2) || 'N/A'}s</td></tr>
-                <tr><td>Pause Ratio</td><td>${rec.pause_ratio != null ? (rec.pause_ratio * 100).toFixed(0) + '%' : 'N/A'}</td></tr>
-                <tr><td>Pathological Pause %</td><td>${rec.pathological_pause_ratio != null ? (rec.pathological_pause_ratio * 100).toFixed(0) + '%' : 'N/A'}</td></tr>
+              <h3>Timing</h3>
+              <table class="tbl">
+                <tr><td>Speaking Rate</td><td>${num(r.speaking_rate)} syl/m</td></tr>
+                <tr><td>Phonation Time</td><td>${num(r.phonation_time,2)}s</td></tr>
+                <tr><td>Phonation Ratio</td><td>${pct(r.phonation_ratio)}</td></tr>
+                <tr><td>Mean Pause</td><td>${num(r.mean_pause_duration,2)}s</td></tr>
               </table>
             </div>
           </div>
 
-          <div class="two-col">
-            <!-- Rate Variability -->
+          <div class="grid-2">
             <div class="card">
-              <h3>Rate Variability ${rec.rate_trend ? `<span class="badge ${rec.rate_trend === 'stable' ? 'good' : 'warn'}">${rec.rate_trend}</span>` : ''}</h3>
-              <table class="data-table">
-                <tr><td>Local CV</td><td>${rec.local_cv?.toFixed(3) || 'N/A'}</td></tr>
-                <tr><td>Global CV</td><td>${rec.global_cv?.toFixed(3) || 'N/A'}</td></tr>
-                <tr><td>Normalized PVI</td><td>${rec.normalized_pvi?.toFixed(3) || 'N/A'}</td></tr>
-                <tr><td>Rate Variability</td><td>${rec.speech_rate_variability?.toFixed(3) || 'N/A'}</td></tr>
+              <h3>Rate Variability ${r.rate_trend?`<span class="badge ${r.rate_trend==='stable'?'good':'warn'}">${r.rate_trend}</span>`:''}</h3>
+              <table class="tbl">
+                <tr><td>Local CV</td><td>${num(r.local_cv,3)}</td><td>Global CV</td><td>${num(r.global_cv,3)}</td></tr>
+                <tr><td>PVI</td><td>${num(r.normalized_pvi,3)}</td><td>Variability</td><td>${num(r.speech_rate_variability,3)}</td></tr>
               </table>
-              <p style="font-size: 11px; color: #94a3b8; margin-top: 12px;">Higher values indicate more variable speech rate</p>
             </div>
-
-            <!-- Fluency Scores -->
             <div class="card">
-              <h3>Fluency Scores (Multiple Methods)</h3>
-              <table class="data-table">
-                <tr><td>Standard Fluency</td><td><strong>${rec.standard_fluency_pct?.toFixed(0) || 'N/A'}%</strong></td></tr>
-                <tr><td>Weighted Fluency</td><td>${rec.weighted_fluency_pct?.toFixed(0) || 'N/A'}%</td></tr>
-                <tr><td>Clinical Fluency</td><td>${rec.clinical_fluency_pct?.toFixed(0) || 'N/A'}%</td></tr>
-                <tr><td>LFR Ratio</td><td>${rec.lfr_ratio != null ? (rec.lfr_ratio * 100).toFixed(0) + '%' : 'N/A'}</td></tr>
+              <h3>Fluency Scores</h3>
+              <table class="tbl">
+                <tr><td>Standard</td><td><strong>${num(r.standard_fluency_pct,0)}%</strong></td><td>Weighted</td><td>${num(r.weighted_fluency_pct,0)}%</td></tr>
+                <tr><td>Clinical</td><td>${num(r.clinical_fluency_pct,0)}%</td><td>LFR Ratio</td><td>${pct(r.lfr_ratio)}</td></tr>
               </table>
             </div>
           </div>
 
-          ${rec.ssi_severity ? `
+          ${r.ssi_severity?`
           <div class="card">
-            <h3>SSI-4 Component Breakdown</h3>
-            <table class="data-table">
-              <thead><tr><th>Component</th><th>Value</th><th>Score</th></tr></thead>
-              <tbody>
-                <tr><td>Frequency</td><td>${rec.ssi_frequency_pct?.toFixed(1) || 'N/A'}%</td><td>${rec.ssi_frequency_score || 'N/A'}/10</td></tr>
-                <tr><td>Duration</td><td>${rec.ssi_avg_duration?.toFixed(2) || 'N/A'}s avg</td><td>${rec.ssi_duration_score || 'N/A'}/10</td></tr>
-                <tr><td><strong>Total</strong></td><td></td><td><strong>${rec.ssi_total_score || 'N/A'}</strong></td></tr>
-              </tbody>
-            </table>
-            <p style="font-size: 11px; color: #94a3b8; margin-top: 12px;">Normal: 0-10 | Mild: 11-17 | Moderate: 18-24 | Severe: 25+</p>
-          </div>
-          ` : ''}
-
-          ${pauseRows ? `
-          <div class="card">
-            <h3>Pause Details</h3>
-            <table class="data-table">
-              <thead><tr><th>#</th><th>Type</th><th>Duration</th><th>Position</th></tr></thead>
-              <tbody>${pauseRows}</tbody>
+            <h3>SSI-4 Breakdown</h3>
+            <table class="tbl">
+              <tr><th>Component</th><th>Value</th><th>Score</th></tr>
+              <tr><td>Frequency</td><td>${num(r.ssi_frequency_pct)}%</td><td>${r.ssi_frequency_score||'?'}/10</td></tr>
+              <tr><td>Duration</td><td>${num(r.ssi_avg_duration,2)}s</td><td>${r.ssi_duration_score||'?'}/10</td></tr>
+              <tr><td><strong>Total</strong></td><td></td><td><strong>${r.ssi_total_score||'?'}</strong></td></tr>
             </table>
           </div>
-          ` : ''}
+          `:''}
 
-          ${(rec.clinical_notes?.length || rec.fluency_notes?.length) ? `
-          <div class="card">
-            <h3>Clinical Notes</h3>
-            <ul class="notes-list">
-              ${[...(rec.clinical_notes || []), ...(rec.fluency_notes || [])].map(n => `<li>${n}</li>`).join('')}
-            </ul>
-          </div>
-          ` : ''}
+          ${pauses?`<div class="card"><h3>Pause Log</h3><table class="tbl"><thead><tr><th>#</th><th>Type</th><th>Dur</th></tr></thead><tbody>${pauses}</tbody></table></div>`:''}
+
+          ${(r.clinical_notes?.length||r.fluency_notes?.length)?`<div class="card"><h3>Clinical Notes</h3>${[...(r.clinical_notes||[]),...(r.fluency_notes||[])].map(n=>`<div class="note">${n}</div>`).join('')}</div>`:''}
         </div>
       `;
     }
 
-    function renderMLTab(rec) {
-      // ML alignment - handles both array format [exp, det] and object format {expected, detected}
-      let alignmentChips = '';
-      if (rec.ml_alignment && rec.ml_alignment.length > 0) {
-        rec.ml_alignment.slice(0, 30).forEach(pair => {
-          const expected = Array.isArray(pair) ? pair[0] : pair.expected;
-          const detected = Array.isArray(pair) ? pair[1] : pair.detected;
-          const match = expected === detected;
-          alignmentChips += `<span class="ph-chip" style="background: ${match ? '#d1fae5' : '#fee2e2'}; color: ${match ? '#065f46' : '#991b1b'};">${expected || '?'}→${detected || '?'}</span>`;
+    function mlTab(r) {
+      let align = '', det = '', ipa = '';
+      if (r.ml_alignment?.length) {
+        r.ml_alignment.slice(0,25).forEach(p => {
+          const [e,d] = Array.isArray(p) ? p : [p.expected, p.detected];
+          const m = e === d;
+          align += `<span class="chip" style="background:${m?'#d1fae5':'#fee2e2'};color:${m?'#065f46':'#991b1b'}">${e||'?'}→${d||'?'}</span>`;
         });
-        if (rec.ml_alignment.length > 30) {
-          alignmentChips += `<span style="color: #64748b; font-size: 12px; margin-left: 8px;">+${rec.ml_alignment.length - 30} more</span>`;
-        }
+        if (r.ml_alignment.length > 25) align += `<span style="color:#94a3b8;font-size:10px">+${r.ml_alignment.length-25}</span>`;
       }
-
-      // Detected phonemes
-      let detectedPhonemes = '';
-      if (rec.ml_detected_phonemes && rec.ml_detected_phonemes.length > 0) {
-        rec.ml_detected_phonemes.forEach(p => {
-          detectedPhonemes += `<span class="ph-chip" style="background: #e0e7ff; color: #3730a3;">${p}</span>`;
-        });
-      }
-
-      // IPA phonemes
-      let ipaPhonemes = '';
-      if (rec.ml_detected_ipa && rec.ml_detected_ipa.length > 0) {
-        rec.ml_detected_ipa.forEach(p => {
-          ipaPhonemes += `<span class="ph-chip" style="background: #fef3c7; color: #92400e;">${p}</span>`;
-        });
-      }
+      if (r.ml_detected_phonemes?.length) r.ml_detected_phonemes.forEach(p => det += `<span class="chip" style="background:#e0e7ff;color:#3730a3">${p}</span>`);
+      if (r.ml_detected_ipa?.length) r.ml_detected_ipa.forEach(p => ipa += `<span class="chip" style="background:#fef3c7;color:#92400e">${p}</span>`);
 
       return `
         <div class="tab-panel" id="tab-ml">
           <div class="summary-row">
-            <div class="summary-card">
-              <div class="big-value ${getErrorClass(rec.ml_per || 0)}">${rec.ml_per != null ? (rec.ml_per * 100).toFixed(0) + '%' : 'N/A'}</div>
-              <div class="label">ML PER</div>
-              <div class="sub-label">Acoustic-based error rate</div>
-            </div>
-            <div class="summary-card">
-              <div class="big-value">${rec.ml_gop?.toFixed(2) || 'N/A'}</div>
-              <div class="label">GOP Score</div>
-              <div class="sub-label">Goodness of Pronunciation</div>
-            </div>
-            <div class="summary-card">
-              <div class="big-value ${getScoreClass(rec.ml_confidence || 0)}">${rec.ml_confidence != null ? (rec.ml_confidence * 100).toFixed(0) + '%' : 'N/A'}</div>
-              <div class="label">Confidence</div>
-            </div>
-            <div class="summary-card">
-              <div class="big-value">${rec.ml_detected_phonemes?.length || 0}</div>
-              <div class="label">Detected Phonemes</div>
-            </div>
+            <div class="summary-card"><div class="big-value ${errClass(r.ml_per||0)}">${pct(r.ml_per)}</div><div class="label">ML PER</div></div>
+            <div class="summary-card"><div class="big-value">${num(r.ml_gop,2)}</div><div class="label">GOP</div></div>
+            <div class="summary-card"><div class="big-value ${scoreClass(r.ml_confidence||0)}">${pct(r.ml_confidence)}</div><div class="label">Confidence</div></div>
+            <div class="summary-card"><div class="big-value">${r.ml_detected_phonemes?.length||0}</div><div class="label">Detected</div></div>
           </div>
 
-          ${detectedPhonemes ? `
-          <div class="card">
-            <h3>Detected Phonemes (ARPAbet)</h3>
-            <div class="phoneme-chips">${detectedPhonemes}</div>
-          </div>
-          ` : ''}
+          ${det?`<div class="card"><h3>Detected (ARPAbet)</h3><div class="chips">${det}</div></div>`:''}
+          ${ipa?`<div class="card"><h3>Detected (IPA)</h3><div class="chips">${ipa}</div></div>`:''}
+          ${align?`<div class="card"><h3>Alignment (Exp→Det)</h3><div class="chips">${align}</div><div style="margin-top:8px"><span class="chip" style="background:#d1fae5;color:#065f46">Match</span> <span class="chip" style="background:#fee2e2;color:#991b1b">Mismatch</span></div></div>`:''}
 
-          ${ipaPhonemes ? `
-          <div class="card">
-            <h3>Detected Phonemes (IPA)</h3>
-            <div class="phoneme-chips">${ipaPhonemes}</div>
-          </div>
-          ` : ''}
-
-          ${alignmentChips ? `
-          <div class="card">
-            <h3>Phoneme Alignment (Expected → Detected)</h3>
-            <div class="phoneme-chips">${alignmentChips}</div>
-            <div style="margin-top: 12px;">
-              <span class="ph-chip" style="background: #d1fae5; color: #065f46;">Match</span>
-              <span class="ph-chip" style="background: #fee2e2; color: #991b1b; margin-left: 8px;">Mismatch</span>
-            </div>
-          </div>
-          ` : ''}
-
-          ${rec.ml_phoneme_scores && rec.ml_phoneme_scores.length > 0 ? `
+          ${r.ml_phoneme_scores?.length?`
           <div class="card">
             <h3>Per-Phoneme Scores</h3>
-            <div class="phoneme-chips">
-              ${rec.ml_phoneme_scores.slice(0, 30).map(s => {
-                const prob = s.probability || 0;
-                const cls = prob > 0.9 ? 'good' : prob > 0.7 ? 'warn' : 'bad';
-                return `<span class="ph-chip badge ${cls}" title="${(prob*100).toFixed(0)}%">${s.phoneme} ${(prob*100).toFixed(0)}%</span>`;
-              }).join('')}
-              ${rec.ml_phoneme_scores.length > 30 ? `<span style="color: #64748b;">+${rec.ml_phoneme_scores.length - 30} more</span>` : ''}
-            </div>
+            <div class="chips">${r.ml_phoneme_scores.slice(0,25).map(s=>{const p=s.probability||0;return`<span class="chip badge ${p>0.9?'good':p>0.7?'warn':'bad'}">${s.phoneme} ${(p*100).toFixed(0)}%</span>`;}).join('')}${r.ml_phoneme_scores.length>25?`<span style="color:#94a3b8;font-size:10px">+${r.ml_phoneme_scores.length-25}</span>`:''}</div>
           </div>
-          ` : ''}
+          `:''}
         </div>
       `;
     }
 
-    function renderRawTab(rec) {
+    function rawTab(r) {
       return `
         <div class="tab-panel" id="tab-raw">
           <div class="card">
-            <h3>Raw JSON Data</h3>
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
-              <button onclick="copyJSON()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">Copy to Clipboard</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <h3 style="margin:0">Raw JSON</h3>
+              <button onclick="navigator.clipboard.writeText(document.getElementById('json').textContent).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',1500)})" style="padding:4px 10px;background:#667eea;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px">Copy</button>
             </div>
-            <pre id="json-data" style="background: #1e293b; color: #e2e8f0; padding: 20px; border-radius: 8px; overflow: auto; max-height: 500px; font-size: 12px; line-height: 1.6;">${JSON.stringify(rec, null, 2).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+            <pre id="json" style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:4px;overflow:auto;max-height:400px;font-size:11px;line-height:1.5">${JSON.stringify(r,null,2).replace(/</g,'&lt;')}</pre>
           </div>
         </div>
       `;
     }
 
-    function copyJSON() {
-      const json = document.getElementById('json-data').textContent;
-      navigator.clipboard.writeText(json).then(() => {
-        const btn = event.target;
-        btn.textContent = '✓ Copied!';
-        btn.style.background = '#059669';
-        setTimeout(() => { btn.textContent = 'Copy to Clipboard'; btn.style.background = '#667eea'; }, 2000);
-      });
-    }
-
-    function initTabs() {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-          btn.classList.add('active');
-          document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-        });
-      });
-    }
-
-    loadRecording();
+    load();
   </script>
 </body>
 </html>
