@@ -125,9 +125,6 @@ def save_recording(
         # Extract fluency analysis
         fluency_analysis = analysis_result.get("fluency_analysis", {})
         longest_fluent_run = fluency_analysis.get("longest_fluent_run")
-        total_pauses = fluency_analysis.get("total_pauses")
-        hesitation_count = fluency_analysis.get("hesitation_count")
-        block_count = fluency_analysis.get("block_count")
         fluency_percentage = fluency_analysis.get("fluency_percentage")
         dysfluencies_per_100_words = fluency_analysis.get("dysfluencies_per_100_words")
         dysfluencies_per_minute = fluency_analysis.get("dysfluencies_per_minute")
@@ -137,8 +134,11 @@ def save_recording(
         lfr_with_tolerance = fluency_analysis.get("lfr_with_tolerance")
         lfr_ratio = fluency_analysis.get("lfr_ratio")
 
-        # Extract pause metrics
+        # Extract pause metrics (hesitation_count, block_count are inside pause_metrics)
         pause_metrics = fluency_analysis.get("pause_metrics", {})
+        total_pauses = pause_metrics.get("total_pauses") or fluency_analysis.get("total_pauses")
+        hesitation_count = pause_metrics.get("hesitation_count") or fluency_analysis.get("hesitation_count")
+        block_count = pause_metrics.get("block_count") or fluency_analysis.get("block_count")
         anomic_pause_count = pause_metrics.get("anomic_count", 0)
         apraxic_pause_count = pause_metrics.get("apraxic_count", 0)
         mean_pause_duration = pause_metrics.get("mean_pause_duration")

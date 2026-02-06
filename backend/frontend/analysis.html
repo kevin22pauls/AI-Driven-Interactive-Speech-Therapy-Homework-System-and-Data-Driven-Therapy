@@ -152,6 +152,20 @@
     }
     .card-body { padding: 16px; }
 
+    /* Card color variants */
+    .card.blue { background: #f0f7ff; border-color: #bfdbfe; }
+    .card.blue .card-header { background: #dbeafe; border-color: #bfdbfe; }
+    .card.green { background: #f0fdf4; border-color: #bbf7d0; }
+    .card.green .card-header { background: #dcfce7; border-color: #bbf7d0; }
+    .card.amber { background: #fffbeb; border-color: #fde68a; }
+    .card.amber .card-header { background: #fef3c7; border-color: #fde68a; }
+    .card.rose { background: #fff1f2; border-color: #fecdd3; }
+    .card.rose .card-header { background: #ffe4e6; border-color: #fecdd3; }
+    .card.purple { background: #faf5ff; border-color: #e9d5ff; }
+    .card.purple .card-header { background: #f3e8ff; border-color: #e9d5ff; }
+    .card.slate { background: #f8fafc; border-color: #e2e8f0; }
+    .card.slate .card-header { background: #f1f5f9; border-color: #e2e8f0; }
+
     /* Tables */
     .table {
       width: 100%;
@@ -605,7 +619,7 @@
           </div>
 
           <div class="content-grid-4">
-            <div class="card">
+            <div class="card rose">
               <div class="card-header"><h3>Dysfluency Metrics</h3></div>
               <div class="card-body">
                 <div class="metrics-list">
@@ -619,7 +633,7 @@
               </div>
             </div>
 
-            <div class="card">
+            <div class="card blue">
               <div class="card-header"><h3>Speech Timing</h3></div>
               <div class="card-body">
                 <div class="metrics-list">
@@ -633,7 +647,7 @@
               </div>
             </div>
 
-            <div class="card">
+            <div class="card purple">
               <div class="card-header"><h3>Rate Variability ${r.rate_trend?`<span class="badge ${r.rate_trend==='stable'?'good':'warn'}">${r.rate_trend}</span>`:''}</h3></div>
               <div class="card-body">
                 <div class="metrics-list">
@@ -645,7 +659,7 @@
               </div>
             </div>
 
-            <div class="card">
+            <div class="card green">
               <div class="card-header"><h3>Fluency Scores</h3></div>
               <div class="card-body">
                 <div class="metrics-list">
