@@ -359,7 +359,7 @@
     function renderOverviewTab(rec) {
       const semScore = rec.semantic_score || 0;
       const per = rec.per || 0;
-      const fluency = rec.fluency_percentage || 0;
+      const fluency = rec.fluency_percentage || rec.standard_fluency_pct || 0;
 
       return `
         <div class="tab-panel active" id="tab-overview">
@@ -605,9 +605,9 @@
           <!-- Summary Cards -->
           <div class="summary-row">
             <div class="summary-card highlight">
-              <div class="big-value ${getScoreClass((rec.fluency_percentage || 0)/100)}">${rec.fluency_percentage?.toFixed(0) || 'N/A'}%</div>
+              <div class="big-value ${getScoreClass((rec.fluency_percentage || rec.standard_fluency_pct || 0)/100)}">${(rec.fluency_percentage ?? rec.standard_fluency_pct)?.toFixed(0) ?? 'N/A'}%</div>
               <div class="label">Fluency Score</div>
-              <div class="progress-bar"><div class="fill ${getScoreClass((rec.fluency_percentage || 0)/100)}" style="width: ${rec.fluency_percentage || 0}%"></div></div>
+              <div class="progress-bar"><div class="fill ${getScoreClass((rec.fluency_percentage || rec.standard_fluency_pct || 0)/100)}" style="width: ${rec.fluency_percentage || rec.standard_fluency_pct || 0}%"></div></div>
             </div>
             <div class="summary-card">
               <div class="big-value">${rec.longest_fluent_run || 0}</div>
