@@ -721,12 +721,14 @@
     }
 
     function renderMLTab(rec) {
-      // ML alignment
+      // ML alignment - handles both array format [exp, det] and object format {expected, detected}
       let alignmentChips = '';
       if (rec.ml_alignment && rec.ml_alignment.length > 0) {
         rec.ml_alignment.slice(0, 30).forEach(pair => {
-          const match = pair.expected === pair.detected;
-          alignmentChips += `<span class="ph-chip" style="background: ${match ? '#d1fae5' : '#fee2e2'}; color: ${match ? '#065f46' : '#991b1b'};">${pair.expected || '?'}→${pair.detected || '?'}</span>`;
+          const expected = Array.isArray(pair) ? pair[0] : pair.expected;
+          const detected = Array.isArray(pair) ? pair[1] : pair.detected;
+          const match = expected === detected;
+          alignmentChips += `<span class="ph-chip" style="background: ${match ? '#d1fae5' : '#fee2e2'}; color: ${match ? '#065f46' : '#991b1b'};">${expected || '?'}→${detected || '?'}</span>`;
         });
         if (rec.ml_alignment.length > 30) {
           alignmentChips += `<span style="color: #64748b; font-size: 12px; margin-left: 8px;">+${rec.ml_alignment.length - 30} more</span>`;
