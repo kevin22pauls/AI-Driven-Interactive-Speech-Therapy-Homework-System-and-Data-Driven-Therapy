@@ -416,7 +416,8 @@
     function overviewTab(r) {
       const sem = r.semantic_score || 0;
       const per = r.per || 0;
-      const flu = r.fluency_percentage || r.standard_fluency_pct || 0;
+      // Use weighted_fluency_pct as primary (most clinically meaningful)
+      const flu = r.weighted_fluency_pct ?? r.clinical_fluency_pct ?? r.fluency_percentage ?? r.standard_fluency_pct ?? 0;
       const wpm = r.speech_rate;
 
       return `
@@ -583,7 +584,9 @@
     }
 
     function fluencyTab(r) {
-      const flu = r.fluency_percentage || r.standard_fluency_pct || 0;
+      // Use weighted_fluency_pct as primary (most clinically meaningful)
+      // Fallback order: weighted -> clinical -> fluency_percentage -> standard
+      const flu = r.weighted_fluency_pct ?? r.clinical_fluency_pct ?? r.fluency_percentage ?? r.standard_fluency_pct ?? 0;
 
       let pauseRows = '';
       if (r.pauses?.length) {
